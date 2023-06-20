@@ -123,7 +123,6 @@ class SimCLR(object):
         earlystop_epoch=0
         logging.info(f"Start SimCLR training for {self.args.epochs} epochs.")
         # logging.info(f"Training with cpu: {self.args.disable_cuda}.")
-        logging.info(f"dataset_name: {self.args.dataset_name}.")
 
         for epoch_counter in range(self.args.epochs):
             # modified
@@ -202,8 +201,6 @@ class SimCLR(object):
         earlystop_epoch=0
         logging.info(f"Start SimCLR training for {self.args.epochs} epochs.")
         # logging.info(f"Training with cpu: {self.args.disable_cuda}.")
-        logging.info(f"dataset_name: {self.args.dataset_name}.")
-
         if self.args.kmer_model_path == 'empty':
             if kmer == '4mer':
                 kmer_len = 136
@@ -369,7 +366,6 @@ class SimCLR(object):
         earlystop_epoch = 0
         logging.info(f"Start SimCLR training for {self.args.epochs} epochs.")
         # logging.info(f"Training with cpu: {self.args.disable_cuda}.")
-        logging.info(f"dataset_name: {self.args.dataset_name}.")
 
         for epoch_counter in range(self.args.covmodelepochs):
             # modified
