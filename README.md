@@ -64,6 +64,15 @@ python Filter_tooshort.py final.contigs.fa 1000
 ## <a name="started"></a>How to run COMEBin:
 
 ### Run COMEBin
+```sh
+cd path_to_COMEBin/COMEBin
+
+bash run_comebin.sh -a ${contig_file} \
+-o ${output_path} \
+-p ${path_to_bamfiles} \
+-t 40
+```
+where ${path_to_bamfiles} denotes the path to access the bam files.
 
 ### or Run COMEBin step by step
 We also support running COMEBin in individual steps. COMEBin mainly consists of three steps: (1) Get augmentation data, (2) Get representation, and (3) Clustering (run Leiden-based clustering methods and get final result).
@@ -90,7 +99,7 @@ kmer=4mer
 n_layer=3
 
 CUDA_VISIBLE_DEVICES=0 python main.py train --data ${data} \
---epochs ${nepochs} --temperature ${temperature} --emb_szs_forcov ${emb_szs_forcov} --dataset_name ${dataset_name} \
+--epochs ${nepochs} --temperature ${temperature} --emb_szs_forcov ${emb_szs_forcov} \
 --kmer ${kmer} --batch_size ${batch_size} --emb_szs ${emb_szs} --n_views ${n_views} --n_layer ${n_layer} \
 --add_model_for_coverage \
 --output_path ${output_path} --earlystop --addvars --vars_sqrt
