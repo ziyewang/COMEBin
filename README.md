@@ -61,7 +61,7 @@ python Filter_tooshort.py final.contigs.fa 1000
 ```
 
 
-## <a name="started"></a>An example to run COMEBin:
+## <a name="started"></a>How to run COMEBin:
 
 ### Run COMEBin
 
