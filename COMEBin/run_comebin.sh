@@ -1,37 +1,152 @@
-temperature=0.15
+#!/usr/bin/env bash
+
+##############################################################################################################################################################
+# This script is meant to be run COMEBin after obtaining the bam files.
+# Author of pipeline: Ziye Wang.
+# For questions, bugs, and suggestions, contact me at zwang17@fudan.edu.cn
+##############################################################################################################################################################
+
+help_message () {
+  echo "Usage: bash run_comebin.sh [options] -a contig_file -o output_dir -p bam_file_path"
+	echo "Options:"
+	echo ""
+	echo "  -a STR          metagenomic assembly file"
+	echo "  -o STR          output directory"
+	echo "  -p STR          path to access to the bam files"
+	echo "  -n INT          number of views for constrastive multiple-view learning (default=6)"
+	echo "  -t INT          number of threads (default=5)"
+	echo "  -l FLOAT        temperature in loss function (default=0.15)"
+	echo "  -e INT          embedding size for comebin network (default=2048)"
+	echo "  -c INT          embedding size for coverage network (default=2048)"
+	echo "  -b INT          batch size for training process (default=1024)"
+	echo "";}
+
+num_threads=5
 n_views=6
+temperature=0.15
 emb_szs_forcov=2048
 emb_szs=2048
 batch_size=1024
-num_threads=48
-output_path=??
-out_augdata_path=??
-bam_file_path=???
-CUDA_VISIBLE_DEVICES=0
 
-python main.py generate_aug_data --contig_file ${contig_file} \
---out_augdata_path ${out_augdata_path} \
---n_views ${n_views} --bam_file_path ${bam_file_path} --num_threads ${num_threads}
+while getopts a:o:p:n:t:l:e:c:b: OPT; do
+ case ${OPT} in
+  a) contig_file=${OPTARG}
+    ;;
+  o) output_dir=${OPTARG}
+    ;;
+  p) bam_file_path=${OPTARG}
+    ;;
+  n) n_views=${OPTARG}
+    ;;
+  t) num_threads=${OPTARG}
+    ;;
+  l) temperature=${OPTARG}
+    ;;
+  e) emb_szs=${OPTARG}
+    ;;
+  c) emb_szs_forcov=${OPTARG}
+    ;;
+  b) batch_size=${OPTARG}
+    ;;
+  \?)
+#    printf "[Usage] `date '+%F %T'` -i <INPUT_FILE> -o <OUTPUT_DIR> -o <P
+#RODUCT_CODE> -s <SOFTWARE_VERSION> -t <TYPE>\n" >&2
+    exit 1
+ esac
+done
+
+# check parameter
+if [ -z "${contig_file}" -o -z "${output_dir}" -o -z "${bam_file_path}" ]; then
+  help_message
+  exit 1
+fi
 
 
-python main.py train --data ${out_augdata_path} \
---temperature ${temperature} --emb_szs_forcov ${emb_szs_forcov} \
---batch_size ${batch_size} --emb_szs ${emb_szs} --n_views ${n_views} \
---add_model_for_coverage \
---output_path ${output_path} --earlystop --addvars --vars_sqrt
 
+########################################################################################################
+###### Get augmentation data
+########################################################################################################
+folder=${output_dir}/data_augmentation
+keyword="_datacoverage_mean"
 
-#### (3) Clustering (run Leiden-based clustering methods and get the final result)
+if [ -d "$folder" ]; then
+    echo "${output_dir}/data_augmentation exists."
+    count=$(find "$folder" -maxdepth 1 -type f -name "*$keyword*" | wc -l)
+    echo "Number of files containing '$keyword' in the folder: $count"
+    if [ "$count" -ne ${n_views} ]; then
+        echo "Running data augmentation."
+        python main.py generate_aug_data --contig_file ${contig_file} \
+        --out_augdata_path ${output_dir}/data_augmentation \
+        --n_views ${n_views} --bam_file_path ${bam_file_path} --num_threads ${num_threads}
+    else
+        echo "No need to run data augmentation."
+    fi
+else
+    echo "${output_dir}/data_augmentation does not exist."
+    echo "Running data augmentation."
+    python main.py generate_aug_data --contig_file ${contig_file} \
+    --out_augdata_path ${output_dir}/data_augmentation \
+    --n_views ${n_views} --bam_file_path ${bam_file_path} --num_threads ${num_threads}
+fi
 
-emb_file=${output_path}/embeddings.tsv
+#python main.py generate_aug_data --contig_file ${contig_file} \
+#--out_augdata_path ${output_dir}/data_augmentation \
+#--n_views ${n_views} --bam_file_path ${bam_file_path} --num_threads ${num_threads}
+
+if [[ $? -ne 0 ]] ; then echo "Something went wrong with running generating augmentation data. Exiting.";exit 1; fi
+
+########################################################################################################
+###### Get representation (training process)
+########################################################################################################
+folder=${output_dir}/comebin_res
+keyword="embeddings.tsv"
+
+if [ -d "$folder" ]; then
+    echo "${output_dir}/comebin_res exists."
+    count=$(find "$folder" -maxdepth 1 -type f -name "*$keyword*" | wc -l)
+    echo "Number of files containing '$keyword' in the folder: $count"
+    if [ "$count" -ne 2 ]; then
+        echo "Running getting representation."
+        python main.py train --data ${output_dir}/data_augmentation \
+        --temperature ${temperature} --emb_szs_forcov ${emb_szs_forcov} \
+        --batch_size ${batch_size} --emb_szs ${emb_szs} --n_views ${n_views} \
+        --add_model_for_coverage \
+        --output_path ${output_dir}/comebin_res --earlystop --addvars --vars_sqrt
+    else
+        echo "No need to run getting representation."
+    fi
+else
+    echo "${output_dir}/comebin_res does not exist."
+    echo "Running getting representation."
+    python main.py train --data ${output_dir}/data_augmentation \
+    --temperature ${temperature} --emb_szs_forcov ${emb_szs_forcov} \
+    --batch_size ${batch_size} --emb_szs ${emb_szs} --n_views ${n_views} \
+    --add_model_for_coverage \
+    --output_path ${output_dir}/comebin_res --earlystop --addvars --vars_sqrt
+fi
+
+#python main.py train --data ${output_dir}/data_augmentation \
+#--temperature ${temperature} --emb_szs_forcov ${emb_szs_forcov} \
+#--batch_size ${batch_size} --emb_szs ${emb_szs} --n_views ${n_views} \
+#--add_model_for_coverage \
+#--output_path ${output_dir}/comebin_res --earlystop --addvars --vars_sqrt
+
+if [[ $? -ne 0 ]] ; then echo "Something went wrong with running training network. Exiting.";exit 1; fi
+
+########################################################################################################
+#### Clustering (run Leiden-based clustering methods and get the final result)
+########################################################################################################
+emb_file=${output_dir}/comebin_res/embeddings.tsv
 seed_file=${contig_file}.bacar_marker.2quarter_lencutoff_1001.seed
 
 python main.py bin --contig_file ${contig_file} \
 --emb_file ${emb_file} \
---output_path ${output_path} \
+--output_path ${output_dir}/comebin_res \
 --seed_file ${seed_file} --num_threads ${num_threads}
 
 python main.py get_result --contig_file ${contig_file} \
---output_path ${output_path} \
+--output_path ${output_dir}/comebin_res \
 --seed_file ${seed_file} --num_threads ${num_threads}
+
+if [[ $? -ne 0 ]] ; then echo "Something went wrong with running clustering. Exiting.";exit 1; fi
 

@@ -15,7 +15,7 @@ def arguments():
         prog="comebin",
         description=doc,
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-        usage="%(prog)s outdir tnf_input rpkm_input [options]???")
+        usage="%(prog)s outdir contig_file path_to_bamfiles [options]")
     parser.version = ver
 
     parser.add_argument('-v','--version',
