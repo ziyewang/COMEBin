@@ -13,7 +13,7 @@ help_message () {
 	echo "  -a STR          metagenomic assembly file"
 	echo "  -o STR          output directory"
 	echo "  -p STR          path to access to the bam files"
-	echo "  -n INT          number of views for constrastive multiple-view learning (default=6)"
+	echo "  -n INT          number of views for contrastive multiple-view learning (default=6)"
 	echo "  -t INT          number of threads (default=5)"
 	echo "  -l FLOAT        temperature in loss function (default=0.15)"
 	echo "  -e INT          embedding size for comebin network (default=2048)"
