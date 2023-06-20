@@ -15,7 +15,7 @@ git clone https://github.com/ziyewang/COMEBin.git
 Then create an environment to run COMEBin.
 
 ```sh
-cd COMEBin
+cd path_to_COMEBin
 conda env create -f comebin_env.yaml
 conda activate comebin_env
 ```
