@@ -53,7 +53,7 @@ Options:
 
 And the users can run the following command to keep the contigs longer than 1000bp for binning.
 
-```
+```sh
 cd path_to_COMEBin
 cd COMEBin/scripts
 
@@ -64,6 +64,68 @@ python Filter_tooshort.py final.contigs.fa 1000
 ## <a name="started"></a>An example to run COMEBin:
 
 We ran COMEBin mainly in three steps: (a) Get augmentation data, (b) Get representation, and (c) Clustering (run Leiden-based clustering methods and get final result).
+### (a) Get augmentation data,
+```sh
+time python main.py generate_aug_data --contig_file ${contig_file} \
+--out_augdata_path ${out_augdata_path} \
+--n_views 6 --bam_file_path ${bam_file_path} --num_threads 48
+```
+where ${bam_file_path} denotes the path to access the bam files
+
+
+
+####################################################################
+NokmerMetric
+####################################################################
+data=/mnt/data1/DeepBin/data/BATS_10samples/running_time/single_sample_mode_10sample/SRR5720233/data_augmentation_clean
+dataset_name=SRR5720233_4mer_6_view
+output_path=/mnt/data1/DeepBin/data/BATS_10samples/running_time/single_sample_mode_10sample/SRR5720233/output/COMEBin_nocovloss_tau0.15_nepoch200_earlystop_addvars_nedge75_vars_sqrt_NokmerMetric
+
+nepochs=200
+temperature=0.15
+n_views=6
+
+#基本固定的参数
+emb_szs_forcov=2048
+emb_szs=2048
+batch_size=1024
+kmer=4mer
+n_layer=3
+
+time CUDA_VISIBLE_DEVICES=0 python main.py train --data ${data} \
+--epochs ${nepochs} --temperature ${temperature} --emb_szs_forcov ${emb_szs_forcov} --dataset_name ${dataset_name} \
+--kmer ${kmer} --batch_size ${batch_size} --emb_szs ${emb_szs} --n_views ${n_views} --n_layer ${n_layer} \
+--add_model_for_coverage \
+--output_path ${output_path} --earlystop --addvars --vars_sqrt
+
+####################################################################
+####binning
+####################################################################
+output_path=/mnt/data1/DeepBin/data/BATS_10samples/running_time/single_sample_mode_10sample/SRR5720233/output/COMEBin_nocovloss_tau0.15_nepoch200_earlystop_addvars_nedge75_vars_sqrt_NokmerMetric
+emb_file=${output_path}/embeddings.tsv
+contig_file=/mnt/data1/DeepBin/data/BATS_10samples/running_time/single_sample_mode_10sample/SRR5720233/BATS_SAMN07137079_METAG.scaffolds.min500.fasta.f1k.fasta
+seed_file=${contig_file}.bacar_marker.2quarter_lencutoff_1001.seed
+
+time python main.py bin --contig_file ${contig_file} \
+--emb_file ${emb_file} \
+--output_path ${output_path} \
+--seed_file ${seed_file} --num_threads 48
+
+#####
+####################################################################
+##gen_final_result
+####################################################################
+output_path=/mnt/data1/DeepBin/data/BATS_10samples/running_time/single_sample_mode_10sample/SRR5720233/output/COMEBin_nocovloss_tau0.15_nepoch200_earlystop_addvars_nedge75_vars_sqrt_NokmerMetric
+emb_file=${output_path}/embeddings.tsv
+contig_file=/mnt/data1/DeepBin/data/BATS_10samples/running_time/single_sample_mode_10sample/SRR5720233/BATS_SAMN07137079_METAG.scaffolds.min500.fasta.f1k.fasta
+seed_file=${contig_file}.bacar_marker.2quarter_lencutoff_1001.seed
+
+time python main.py get_result --contig_file ${contig_file} \
+--output_path ${output_path} \
+--seed_file ${seed_file} --num_threads 48
+
+
+
 ```sh
 ```
 
