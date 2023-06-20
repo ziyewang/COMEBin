@@ -97,7 +97,7 @@ CUDA_VISIBLE_DEVICES=0 python main.py train --data ${data} \
 ```
 where ${output_path}  denotes the path to save the output files.
 
-### (3) Clustering (run Leiden-based clustering methods and get the final result)
+#### (3) Clustering (run Leiden-based clustering methods and get the final result)
 Leiden-based clustering:
 ```sh
 emb_file=${output_path}/embeddings.tsv
