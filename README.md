@@ -80,7 +80,7 @@ We also support running COMEBin in individual steps. COMEBin mainly consists of 
 ```sh
 python main.py generate_aug_data --contig_file ${contig_file} \
 --out_augdata_path ${out_augdata_path} \
---n_views 6 --bam_file_path ${bam_file_path} --num_threads 48
+--n_views 6 --bam_file_path ${bam_file_path} --num_threads 40
 ```
 where ${bam_file_path} denotes the path to access the bam files and ${out_augdata_path} denotes the path to save the generated augmentaion data.
 
@@ -95,12 +95,11 @@ n_views=6
 emb_szs_forcov=2048
 emb_szs=2048
 batch_size=1024
-kmer=4mer
 n_layer=3
 
 CUDA_VISIBLE_DEVICES=0 python main.py train --data ${data} \
 --epochs ${nepochs} --temperature ${temperature} --emb_szs_forcov ${emb_szs_forcov} \
---kmer ${kmer} --batch_size ${batch_size} --emb_szs ${emb_szs} --n_views ${n_views} --n_layer ${n_layer} \
+--batch_size ${batch_size} --emb_szs ${emb_szs} --n_views ${n_views} --n_layer ${n_layer} \
 --add_model_for_coverage \
 --output_path ${output_path} --earlystop --addvars --vars_sqrt
 ```
@@ -116,7 +115,7 @@ seed_file=${contig_file}.bacar_marker.2quarter_lencutoff_1001.seed
 python main.py bin --contig_file ${contig_file} \
 --emb_file ${emb_file} \
 --output_path ${output_path} \
---seed_file ${seed_file} --num_threads 48
+--seed_file ${seed_file} --num_threads 40
 ```
 Get the final result:
 ```sh
