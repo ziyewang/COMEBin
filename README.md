@@ -7,12 +7,12 @@ GitHub repository for the manuscript "COMEBin allows effective binning of metage
 
 
 Obtain codes and create an environment:
-After installing Anaconda (or miniconda), fisrt obtain COMEBin:
+After installing Anaconda (or miniconda), first obtain COMEBin:
 
 ```sh
 git clone https://github.com/ziyewang/COMEBin.git
 ```
-Then simply create a environment to run COMEBin.
+Then create an environment to run COMEBin.
 
 ```sh
 cd MetaBinner
@@ -45,7 +45,7 @@ Options:
         -m INT          amount of RAM available (default=4)
         -l INT          minimum contig length to bin (default=1000bp).
         --single-end    non-paired reads mode (provide *.fastq files)
-        --interleaved   the input read files contain interleaved paired-end reads
+        --interleaved   input read files contain interleaved paired-end reads
         -f              Forward read suffix for paired reads (default="_1.fastq")
 	-r              Reverse read suffix for paired reads (default="_2.fastq")
 
@@ -62,8 +62,9 @@ python Filter_tooshort.py final.contigs.fa 1000
 
 
 ## <a name="started"></a>An example to run COMEBin:
-```sh
 
+We ran COMEBin mainly in three steps: (a) Get augmentation data, (b) Get representation, and (c) Clustering (run Leiden-based clustering methods and get final result).
+```sh
 ```
 
 ## <a name="contact"></a>Contacts and bug reports
