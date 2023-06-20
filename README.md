@@ -63,8 +63,8 @@ python Filter_tooshort.py final.contigs.fa 1000
 
 ## <a name="started"></a>An example to run COMEBin:
 
-We ran COMEBin mainly in three steps: (a) Get augmentation data, (b) Get representation, and (c) Clustering (run Leiden-based clustering methods and get final result).
-### (a) Get augmentation data
+We ran COMEBin mainly in three steps: (1) Get augmentation data, (2) Get representation, and (3) Clustering (run Leiden-based clustering methods and get final result).
+### (1) Get augmentation data
 ```sh
 python main.py generate_aug_data --contig_file ${contig_file} \
 --out_augdata_path ${out_augdata_path} \
@@ -72,7 +72,7 @@ python main.py generate_aug_data --contig_file ${contig_file} \
 ```
 where ${bam_file_path} denotes the path to access the bam files and ${out_augdata_path} denotes the path to save the generated augmentaion data.
 
-### (b) Get representation (training process)
+### (2) Get representation (training process)
 ```sh
 data=${out_augdata_path}
 
@@ -94,7 +94,7 @@ time CUDA_VISIBLE_DEVICES=0 python main.py train --data ${data} \
 ```
 where ${output_path}  denotes the path to save the output files.
 
-### (c) Clustering (run Leiden-based clustering methods and get the final result)
+### (3) Clustering (run Leiden-based clustering methods and get the final result)
 Leiden-based clustering:
 ```sh
 emb_file=${output_path}/embeddings.tsv
