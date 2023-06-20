@@ -71,8 +71,20 @@ bash run_comebin.sh -a ${contig_file} \
 -o ${output_path} \
 -p ${path_to_bamfiles} \
 -t 40
+
+Usage: bash run_comebin.sh [options] -a contig_file -o output_dir -p bam_file_path
+Options:
+
+  -a STR          metagenomic assembly file
+  -o STR          output directory
+  -p STR          path to access to the bam files
+  -n INT          number of views for constrastive multiple-view learning (default=6)
+  -t INT          number of threads (default=5)
+  -l FLOAT        temperature in loss function (default=0.15)
+  -e INT          embedding size for comebin network (default=2048)
+  -c INT          embedding size for coverage network (default=2048)
+  -b INT          batch size for training process (default=1024)
 ```
-where ${path_to_bamfiles} denotes the path to access the bam files.
 
 ### or Run COMEBin step by step
 We also support running COMEBin in individual steps. COMEBin mainly consists of three steps: (1) Get augmentation data, (2) Get representation, and (3) Clustering (run Leiden-based clustering methods and get final result).
