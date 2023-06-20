@@ -146,11 +146,12 @@ Ziye Wang: zwang17@fudan.edu.cn and Prof. Shanfeng Zhu: zhusf@fudan.edu.cn
 
 
 ## <a name="References"></a>References
-[3] https://github.com/dparks1134/UniteM.
+[1] https://github.com/dparks1134/UniteM.
 
-[4] Parks, Donovan H., et al. "CheckM: assessing the quality of microbial genomes recovered from isolates, single cells, and metagenomes." Genome research 25.7 (2015): 1043-1055.
+[2] Parks, Donovan H., et al. "CheckM: assessing the quality of microbial genomes recovered from isolates, single cells, and metagenomes." Genome research 25.7 (2015): 1043-1055.
 
-[5] Christian M. K. Sieber, Alexander J. Probst., et al. (2018). "Recovery of genomes from metagenomes via a dereplication, aggregation and scoring strategy". Nature Microbiology. https://doi.org/10.1038/s41564-018-0171-1.
+[3] Christian M. K. Sieber, Alexander J. Probst., et al. (2018). "Recovery of genomes from metagenomes via a dereplication, aggregation and scoring strategy." Nature Microbiology. https://doi.org/10.1038/s41564-018-0171-1.
 
-[6] Uritskiy, Gherman V., Jocelyne DiRuggiero, and James Taylor. "MetaWRAP—a flexible pipeline for genome-resolved metagenomic data analysis." Microbiome 6.1 (2018): 1-13.
+[4] Uritskiy, Gherman V., Jocelyne DiRuggiero, and James Taylor. "MetaWRAP—a flexible pipeline for genome-resolved metagenomic data analysis." Microbiome 6.1 (2018): 1-13.
 
+[5] Pan, Shanjun, et al. (2022). "A deep siamese neural network improves metagenome-assembled genomes in microbiome datasets across different environments." Nature Communications. https://doi.org/10.1038/s41467-022-29843-y
