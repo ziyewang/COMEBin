@@ -5,9 +5,7 @@ MetaBinner consists of two modules: 1) “Component module” includes steps 1-4
 
 ## <a name="started"></a>Getting Started
 
-```
-
-### <a name="docker"></a>or Install COMEBin via source code
+### <a name="docker"></a>Install COMEBin via source code
 
 
 Obtain codes and create an environment:
@@ -29,20 +27,8 @@ conda activate comebin_env
 The preprocessing steps aim to generate bam files as input to our program.
 
 There are several binning methods that can generate bam files by aligning reads to contigs (such as MetaWRAP and MetaBAT) and we provide one method to generate the input files as follows.
-### Coverage Profile
-The coverage profiles of the contigs for the results in the manuscript were obtained via MetaWRAP 1.2.1 script: ``binning.sh".
-
-If users have obtained the coverage (depth) file generated for MaxBin (mb2_master_depth.txt) using MetaWRAP, they can run the following command to generate the input coverage file for MetaBinner:
-```sh
-cat mb2_master_depth.txt | cut -f -1,4- > coverage_profile.tsv
-```
-or remove the contigs no longer than 1000bp like this:
-```sh
-cat mb2_master_depth.txt | awk '{if ($2>1000) print $0 }' | cut -f -1,4- > coverage_profile_f1k.tsv
-
-```
-
-To generate coverage from sequencing reads directly, run the following script slightly modified from the "binning.sh" of MetaWRAP. The script support different types of sequencing reads, and the defalut type is "paired" ([readsX_1.fastq readsX_2.fastq ...]). If MetaBinner is installed via bioconda, users can obtain path_to_MetaBinner via running this command: $(dirname $(which run_metabinner.sh))
+### Generate bam files 
+To generate bam files from sequencing reads directly, run the following script slightly modified from the "binning.sh" of MetaWRAP. The script support different types of sequencing reads, and the defalut type is "paired" ([readsX_1.fastq readsX_2.fastq ...]). If MetaBinner is installed via bioconda, users can obtain path_to_MetaBinner via running this command: $(dirname $(which run_metabinner.sh))
 
 ```sh
 cd path_to_COMEBin
@@ -77,12 +63,11 @@ python Filter_tooshort.py test_data/final.contigs_f1k.fa 1000
 ```
 
 
-## <a name="started"></a>An example to run MetaBinner:
-Test data is available at https://drive.google.com/file/d/1a-IOOpklXQr_C4sgNxjsxGEkx-n-0aa4/view?usp=sharing
+## <a name="started"></a>An example to run COMEBin:
 ```sh
 
-#path to MetaBinner
-metabinner_path=/home/wzy/MetaBinner
+#path to COMEBin
+metabinner_path=/home/wzy/COMEBin
 Note: If users intall MetaBinner via bioconda, they can set metabinner_path as follows: metabinner_path=$(dirname $(which run_metabinner.sh))
 
 ##test data
