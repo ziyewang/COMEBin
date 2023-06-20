@@ -7,7 +7,7 @@ GitHub repository for the manuscript "COMEBin allows effective binning of metage
 
 
 Obtain codes and create an environment:
-After installing Anaconda (or miniconda), first obtain COMEBin:
+After installing Anaconda (or miniconda), first, obtain COMEBin:
 
 ```sh
 git clone https://github.com/ziyewang/COMEBin.git
@@ -43,7 +43,7 @@ Options:
 	-b STR          directory for the bam files (optional)
         -t INT          number of threads (default=1)
         -m INT          amount of RAM available (default=4)
-        -l INT          minimum contig length to bin (default=1000bp).
+        -l INT          minimum contig length to the bin (default=1000bp).
         --single-end    non-paired reads mode (provide *.fastq files)
         --interleaved   input read files contain interleaved paired-end reads
         -f              Forward read suffix for paired reads (default="_1.fastq")
@@ -78,10 +78,10 @@ Options:
   -a STR          metagenomic assembly file
   -o STR          output directory
   -p STR          path to access to the bam files
-  -n INT          number of views for constrastive multiple-view learning (default=6)
+  -n INT          number of views for contrastive multiple-view learning (default=6)
   -t INT          number of threads (default=5)
   -l FLOAT        temperature in loss function (default=0.15)
-  -e INT          embedding size for comebin network (default=2048)
+  -e INT          embedding size for combine network (default=2048)
   -c INT          embedding size for coverage network (default=2048)
   -b INT          batch size for training process (default=1024)
 ```
