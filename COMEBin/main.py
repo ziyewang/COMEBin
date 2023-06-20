@@ -109,7 +109,7 @@ def arguments():
     CLtraining_subparsers.add_argument('--covmodel_temperature', default=0.1, type=float,
                         help='softmax temperature (default: 0.1)')
 
-    CLtraining_subparsers.add_argument('--n_views', default=2, type=int, metavar='N',
+    CLtraining_subparsers.add_argument('--n_views', default=6, type=int, metavar='N',
                         help='Number of views for contrastive learning training.')
     CLtraining_subparsers.add_argument('--contig_len', default = 1000, type=int, metavar='N',
                         help='mininum contig length for training')
