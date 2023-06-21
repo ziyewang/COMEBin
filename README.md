@@ -136,7 +136,7 @@ seed_file=${contig_file}.bacar_marker.2quarter_lencutoff_1001.seed
 
 python main.py get_result --contig_file ${contig_file} \
 --output_path ${output_path} \
---seed_file ${seed_file} --num_threads 48
+--seed_file ${seed_file} --num_threads 40
 ```
 
 

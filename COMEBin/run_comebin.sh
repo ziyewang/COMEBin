@@ -23,7 +23,7 @@ help_message () {
 
 num_threads=5
 n_views=6
-temperature=0.15
+#temperature=0.15
 emb_szs_forcov=2048
 emb_szs=2048
 batch_size=1024
@@ -60,6 +60,29 @@ if [ -z "${contig_file}" -o -z "${output_dir}" -o -z "${bam_file_path}" ]; then
   help_message
   exit 1
 fi
+
+
+if [ -z "$temperature" ]; then
+    # Compute the length of each sequence and sort using the awk command
+    awk '/^>/ {if (seqlen) print seqlen; seqlen=0; next} {seqlen+=length($0)} END {print seqlen}' "$contig_file" | sort -rn > ${contig_file}_lengths.txt
+
+    # CAL N50
+    total_length=$(awk '{sum+=$1} END {print sum}' ${contig_file}_lengths.txt)
+    target_length=$(awk -v total="$total_length" 'BEGIN {cutoff=total/2; current=0} {current+=$1; if (current >= cutoff) {print $1; exit}}' ${contig_file}_lengths.txt)
+
+    # N50
+    echo "N50: $target_length"
+    # Check if N50 is greater than 10000 and set tau accordingly
+    if [ "$target_length" -gt 10000 ]; then
+        temperature=0.07
+    else
+        temperature=0.15
+    fi
+    echo "Tau(temperature): ${temperature}"
+else
+    echo "Tau(temperature): ${temperature}"
+fi
+
 
 
 
