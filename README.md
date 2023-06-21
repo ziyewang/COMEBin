@@ -80,7 +80,7 @@ Options:
   -p STR          path to access to the bam files
   -n INT          number of views for contrastive multiple-view learning (default=6)
   -t INT          number of threads (default=5)
-  -l FLOAT        temperature in loss function (default=0.15)
+  -l FLOAT        temperature in loss function (default=0.07 for assemblies with an N50 > 10000, default=0.15 for others)
   -e INT          embedding size for combine network (default=2048)
   -c INT          embedding size for coverage network (default=2048)
   -b INT          batch size for training process (default=1024)

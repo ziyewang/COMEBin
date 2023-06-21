@@ -15,7 +15,7 @@ help_message () {
 	echo "  -p STR          path to access to the bam files"
 	echo "  -n INT          number of views for contrastive multiple-view learning (default=6)"
 	echo "  -t INT          number of threads (default=5)"
-	echo "  -l FLOAT        temperature in loss function (default=0.15)"
+	echo "  -l FLOAT        temperature in loss function (default=0.07 for assemblies with an N50 > 10000, default=0.15 for others)"
 	echo "  -e INT          embedding size for comebin network (default=2048)"
 	echo "  -c INT          embedding size for coverage network (default=2048)"
 	echo "  -b INT          batch size for training process (default=1024)"
