@@ -12,7 +12,9 @@ The framework of COMEBin is shown in the following figure, which is mainly divid
 
 Among them, the network structure used in contrastive learning includes two parts: 1) "Coverage network": process coverage features and 2) "Combine network": integrate the k-mer features and the "Coverage network" to obtain representations containing heterogeneous information.
 
-
+<p align="center">
+<img src="https://github.com/ziyewang/COMEBin/blob/master/overview.png" width="550"/>
+</p>
 
 ## <a name="requirements"></a>System Requirements
 ### Hardware requirements
