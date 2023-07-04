@@ -63,7 +63,12 @@ CUDA_VISIBLE_DEVICES=0 bash run_comebin.sh -a comebin_test_data/BATS_SAMN0713707
 -n 6 \
 -t 40
 ```
+Excepted output is given in comebin_test_data/run_comebin_test
 
+```sh
+Final result (bins): comebin_test_data/run_comebin_test/comebin_res/comebin_res_bins
+Final result in tsv format: comebin_test_data/run_comebin_test/comebin_res/comebin_res.tsv
+```
 
 
 ## <a name="preprocessing"></a>Preprocessing
