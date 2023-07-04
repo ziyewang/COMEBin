@@ -48,7 +48,7 @@ comebin_test_data/BATS_SAMN07137077_METAG.scaffolds.min500.fasta.f1k.fasta
 comebin_test_data/bamfiles/SRR5720343.bam
 ```
 Run COMEBin on the testing dataset:
-
+```sh
 comebin_test_data/bamfiles/SRR5720343.bam
 CUDA_VISIBLE_DEVICES=0 bash run_comebin.sh -a comebin_test_data/BATS_SAMN07137077_METAG.scaffolds.min500.fasta.f1k.fasta \
 -p comebin_test_data/bamfiles \
