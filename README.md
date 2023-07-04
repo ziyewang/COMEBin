@@ -9,12 +9,14 @@ GitHub repository for the manuscript "COMEBin allows effective binning of metage
   
 ## <a name="overview"></a>Overview
 
+
 ## <a name="requirements"></a>System Requirements
 ### Hardware requirements
 COMEBin requires only a standard computer with enough RAM to support the in-memory operations.
 
 ### OS Requirements
 COMEBin v1.0.0 is supported and tested in Linux systems.
+
 
 ## <a name="started"></a>Install COMEBin via source code
 
