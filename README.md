@@ -3,6 +3,7 @@ GitHub repository for the manuscript "COMEBin allows effective binning of metage
 - [Overview](#overview)
 - [System Requirements](#requirements)
 - [Install COMEBin via source code](#started)
+- [A test dataset to demo COMEBin](#demo)
 - [Preprocessing](#preprocessing)
 - [How to run COMEBin](#runcomebin)
 - [Contacts and bug reports](#contact)
@@ -39,6 +40,24 @@ cd path_to_COMEBin
 conda env create -f comebin_env.yaml
 conda activate comebin_env
 ```
+
+## <a name="demo"></a>A test dataset to demo COMEBin
+We provide a small simulated dataset to demo and test the software. Test data is available at 
+```sh
+comebin_test_data/BATS_SAMN07137077_METAG.scaffolds.min500.fasta.f1k.fasta
+comebin_test_data/bamfiles/SRR5720343.bam
+```
+Run COMEBin on the testing dataset:
+
+comebin_test_data/bamfiles/SRR5720343.bam
+CUDA_VISIBLE_DEVICES=0 bash run_comebin.sh -a comebin_test_data/BATS_SAMN07137077_METAG.scaffolds.min500.fasta.f1k.fasta \
+-p comebin_test_data/bamfiles \
+-o comebin_test_data/expected_output/run_comebin_test \
+-n 6 \
+-t 40
+```
+
+
 
 ## <a name="preprocessing"></a>Preprocessing
 
