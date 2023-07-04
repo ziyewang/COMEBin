@@ -41,6 +41,12 @@ conda env create -f comebin_env.yaml
 conda activate comebin_env
 ```
 
+Add dependencies: You need to run the command to make the file executable
+```sh
+cd path_to_COMEBin/auxiliary
+chmod +x test_getmarker_2quarter.pl
+```
+
 ## <a name="demo"></a>A test dataset to demo COMEBin
 We provide a small dataset to demo and test the software. Test data is available at 
 ```sh
