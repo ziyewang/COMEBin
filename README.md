@@ -8,6 +8,11 @@ GitHub repository for the manuscript "COMEBin allows effective binning of metage
 - [Contacts and bug reports](#contact)
   
 ## <a name="overview"></a>Overview
+The framework of COMEBin is shown in following figure, which is mainly divided into the following steps: 1) Data augmentation: construct five sets of augmented data by randomly extracting subsequences from the original contigs, resulting in six views for each original contig; 2) Construct feature vector: construct nucleotide frequency feature and coverage feature for each contig (including the original sequences and augmented sequences); 3) Contrastive learning: 
+obtain low-dimensional embedding representations suitable for binning with heterogeneous information based on multi-view comparative learning, and 4) Clustering: generate binning results based on community division algorithm Leiden.
+
+Among them, the network structure used in contrastive learning includes two parts: 1)``Coverage network": process coverage features and 2)``Combine network": integrate the $k-$mer features and the ``Coverage network" to obtain representations containing heterogeneous information.
+
 
 
 ## <a name="requirements"></a>System Requirements
