@@ -48,7 +48,7 @@ chmod +x test_getmarker_2quarter.pl
 ```
 
 ## <a name="demo"></a>A test dataset to demo COMEBin
-We provide a small dataset to demo and test the software. Test data is available at 
+We provide a small dataset to demo and test the software. Test data is available at https://drive.google.com/file/d/1xWpN2z8JTaAzWW4TcOl0Lr4Y_x--Fs5s/view?usp=sharing
 ```sh
 comebin_test_data/BATS_SAMN07137077_METAG.scaffolds.min500.fasta.f1k.fasta
 comebin_test_data/bamfiles/SRR5720343.bam
