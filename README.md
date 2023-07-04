@@ -42,7 +42,7 @@ conda activate comebin_env
 ```
 
 ## <a name="demo"></a>A test dataset to demo COMEBin
-We provide a small simulated dataset to demo and test the software. Test data is available at 
+We provide a small dataset to demo and test the software. Test data is available at 
 ```sh
 comebin_test_data/BATS_SAMN07137077_METAG.scaffolds.min500.fasta.f1k.fasta
 comebin_test_data/bamfiles/SRR5720343.bam
