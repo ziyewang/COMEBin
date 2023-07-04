@@ -1,7 +1,9 @@
 # COMEBin
 GitHub repository for the manuscript "COMEBin allows effective binning of metagenomic contigs using COntrastive Multi-viEw representation learning".
-- [overview](#overview)
-
+- [Overview](#overview)
+- [Getting Started](#started)
+- [Preprocessing](#preprocessing)
+  
 ## <a name="overview"></a>Overview
 
 ## <a name="started"></a>Getting Started
