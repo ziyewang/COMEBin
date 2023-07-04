@@ -57,17 +57,17 @@ Run COMEBin on the test dataset:
 ```sh
 cd path_to_COMEBin/COMEBin
 
-CUDA_VISIBLE_DEVICES=0 bash run_comebin.sh -a comebin_test_data/BATS_SAMN07137077_METAG.scaffolds.min500.fasta.f1k.fasta \
--p comebin_test_data/bamfiles \
--o comebin_test_data/expected_output/run_comebin_test \
+CUDA_VISIBLE_DEVICES=0 bash run_comebin.sh -a path_to_comebin_test_data/BATS_SAMN07137077_METAG.scaffolds.min500.fasta.f1k.fasta \
+-p path_to_comebin_test_data/bamfiles \
+-o path_to_comebin_test_data/expected_output/run_comebin_test \
 -n 6 \
 -t 40
 ```
-Excepted output is given in: comebin_test_data/expected_output/run_comebin_test
+Excepted output is given in: path_to_comebin_test_data/expected_output/run_comebin_test
 
 ```sh
-Final result (bins): comebin_test_data/expected_output/run_comebin_test/comebin_res/comebin_res_bins
-Final result in tsv format: comebin_test_data/expected_output/run_comebin_test/comebin_res/comebin_res.tsv
+Final result (bins): path_to_comebin_test_data/expected_output/run_comebin_test/comebin_res/comebin_res_bins
+Final result in tsv format: path_to_comebin_test_data/expected_output/run_comebin_test/comebin_res/comebin_res.tsv
 ```
 
 
