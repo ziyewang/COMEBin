@@ -3,6 +3,8 @@ GitHub repository for the manuscript "COMEBin allows effective binning of metage
 - [Overview](#overview)
 - [Getting Started](#started)
 - [Preprocessing](#preprocessing)
+- [How to run COMEBin](#runcomebin)
+- [Contacts and bug reports](#contact)
   
 ## <a name="overview"></a>Overview
 
@@ -66,7 +68,7 @@ python Filter_tooshort.py final.contigs.fa 1000
 ```
 
 
-## <a name="started"></a>How to run COMEBin
+## <a name="runcomebin"></a>How to run COMEBin
 
 ### Run COMEBin
 ```sh
