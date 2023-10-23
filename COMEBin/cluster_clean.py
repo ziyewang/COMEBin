@@ -30,9 +30,22 @@ logger.addHandler(console_hdr)
 
 
 def fit_hnsw_index(logger,features, ef=100, M=16, space='l2', save_index_file=False):
-    # Convenience function to create HNSW graph
-    # features : list of lists containing the embeddings
-    # ef, M: parameters to tune the HNSW algorithm
+    """
+    Fit an HNSW index with the given features using the HNSWlib library; Convenience function to create HNSW graph.
+
+    Parameters:
+    logger (Logger): The logger object for logging messages.
+    features (list of lists): A list of lists containing the embeddings.
+    ef (int), M (int): parameters to tune the HNSW algorithm
+    space (str): The space in which the index operates (default: 'l2').
+    save_index_file (str): The path to save the HNSW index file (optional).
+
+    Returns:
+    hnswlib.Index: The HNSW index created using the given features.
+
+    This function fits an HNSW index to the provided features, allowing efficient similarity search in high-dimensional spaces.
+    """
+
     time_start = time.time()
     num_elements = len(features)
     labels_index = np.arange(num_elements)
@@ -60,7 +73,26 @@ def fit_hnsw_index(logger,features, ef=100, M=16, space='l2', save_index_file=Fa
     return p
 
 
-def seed_kmeans_full(logger, contig_file, namelist, out_path, X_mat, bin_number, prefix, length_weight, seed_bacar_marker_url):
+def seed_kmeans_full(logger, contig_file: str, namelist: List[str], out_path: str,
+                     X_mat: np.ndarray, bin_number: int, prefix: str, length_weight: np.ndarray, seed_bacar_marker_url: str):
+    """
+    Perform weighted seed-kmeans clustering with specified parameters.
+
+    Parameters:
+    contig_file: The path to the contig file.
+    namelist: A list of contig names.
+    out_path: The output path for saving results.
+    X_mat: The input data matrix for clustering.
+    bin_number: The number of bins (clusters) to create.
+    prefix: A prefix to be added to the output file names.
+    length_weight: The weights for contig lengths.
+    seed_bacar_marker_url: The path to the seed markers used for initialization.
+
+    Returns:
+    None
+
+    This function performs weighted seed-based k-means clustering on the input data using specified parameters and saves the results.
+    """
     out_path = out_path + prefix
     seed_bacar_marker_idx = gen_seed_idx(seed_bacar_marker_url, contig_id_list=namelist)
     time_start = time.time()
@@ -77,10 +109,20 @@ def seed_kmeans_full(logger, contig_file, namelist, out_path, X_mat, bin_number,
         gen_bins_from_tsv(contig_file, output_temp, output_temp+'_bins')
 
         time_end = time.time()
-        logger.info("Running partial seed cost:\t"+str(time_end - time_start) + 's.')
+        logger.info("Running weighted seed-kmeans cost:\t"+str(time_end - time_start) + 's.')
 
 
-def gen_seed_idx(seedURL, contig_id_list):
+def gen_seed_idx(seedURL: str, contig_id_list: List[str]) -> List[int]:
+    """
+    Generate a list of indices corresponding to seed contig IDs from a given URL.
+
+    Args:
+        seedURL: The URL or path to the file containing seed contig names.
+        contig_id_list (List[str]): List of all contig IDs to match with the seed contig names.
+
+    Returns:
+        List: A list of indices that correspond to the positions of seed contig IDs in contig_id_list.
+    """
     seed_list = []
     with open(seedURL) as f:
         for line in f:
@@ -92,7 +134,24 @@ def gen_seed_idx(seedURL, contig_id_list):
 
 
 # change from sklearn.cluster.kmeans
-def partial_seed_init(X, n_clusters, random_state, seed_idx, n_local_trials=None):
+def partial_seed_init(X, n_clusters: int, random_state, seed_idx, n_local_trials=None) -> np.ndarray:
+    """
+    Partial initialization of KMeans centers with seeds from seed_idx.
+
+    Parameters:
+    - X: Features.
+    - n_clusters: The number of clusters.
+    - random_state: Determines random number generation for
+      centroid initialization. Use an int for reproducibility.
+    - seed_idx: Indices of seed points for initialization.
+    - n_local_trials: The number of local seeding trials. Default is None.
+
+    Returns:
+    - centers (ndarray): The initialized cluster centers.
+
+    This function initializes a KMeans clustering by partially seeding the centers with provided seeds.
+    It is a modification of the KMeans initialization algorithm.
+    """
     random_state = check_random_state(random_state)
     x_squared_norms = row_norms(X, squared=True)
 
@@ -175,7 +234,7 @@ def partial_seed_init(X, n_clusters, random_state, seed_idx, n_local_trials=None
 
 
 def run_leiden(output_file, namelist,
-               ann_neighbor_indices, ann_distances,length_weight, max_edges, norm_embeddings, percentile=5, bandwidth=None, lmode='l2', initial_list=None,is_membership_fixed=None, resolution_parameter=1.0,partgraph_ratio=50 ):
+               ann_neighbor_indices, ann_distances,length_weight, max_edges, norm_embeddings, bandwidth=0.1, lmode='l2', initial_list=None,is_membership_fixed=None, resolution_parameter=1.0,partgraph_ratio=50 ):
     sources = np.repeat(np.arange(len(norm_embeddings)), max_edges)
     targets_indices = ann_neighbor_indices[:,1:]
     targets = targets_indices.flatten()
@@ -191,13 +250,9 @@ def run_leiden(output_file, namelist,
 
     if lmode == 'l1':
         wei = np.sqrt(wei)
-        if not bandwidth:
-            bandwidth = np.percentile(wei, percentile)
         wei = np.exp(-wei / bandwidth)
 
     if lmode == 'l2':
-        if not bandwidth:
-            bandwidth = np.percentile(wei, percentile)
         wei = np.exp(-wei / bandwidth)
 
     index = sources > targets
@@ -285,7 +340,7 @@ def cluster(logger, args, prefix=None):
     mode = 'weight_seed_kmeans'
     if prefix:
         mode = mode + '_' + prefix
-    logger.info("Run seed k-means.")
+    logger.info("Run weighted seed k-means for obtaining the SCG information of the contigs within a manageable time during the final step.")
     bin_nums = [seed_num]
 
     if args.cluster_num:
@@ -323,17 +378,17 @@ def cluster(logger, args, prefix=None):
             for partgraph_ratio in partgraph_ratio_list:
                 for bandwidth in bandwidth_list:
                     for para in parameter_list:
-                        output_file = output_path + 'Leiden_markerseed_nodesize_bandwidth_' + str(
+                        output_file = output_path + 'Leiden_bandwidth_' + str(
                             bandwidth) + '_res_maxedges' + str(max_edges) + 'respara_'+str(para)+'_partgraph_ratio_'+str(partgraph_ratio)+'.tsv'
 
                         if not (os.path.exists(output_file)):
                             multiprocess.apply_async(run_leiden, (output_file, namelist, ann_neighbor_indices, ann_distances, length_weight, max_edges, norm_embeddings,
-                                                                        None, bandwidth, 'l2', initial_list,is_membership_fixed,
+                                                                        bandwidth, 'l2', initial_list,is_membership_fixed,
                                                                         para, partgraph_ratio))
 
             multiprocess.close()
             multiprocess.join()
-        print('multiprocess Done')
+        logger.info('multiprocess Done')
 
 
 
