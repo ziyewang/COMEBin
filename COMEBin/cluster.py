@@ -250,7 +250,7 @@ def run_leiden(output_file: str, namelist: List[str],
     :param is_membership_fixed: Whether membership is fixed (default: None).
     :param resolution_parameter: Resolution parameter (default: 1.0).
     :param partgraph_ratio: Partition graph ratio (default: 50).
-    
+
     :return: None
     """
 
