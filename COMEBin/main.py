@@ -185,6 +185,8 @@ def arguments():
 
     #############################################################################################
     ############################################ generate aug data #####################################
+    ### Command-line arguments and options for data augmentation.
+
     generate_aug_data_subparsers = subparsers.add_parser('generate_aug_data',
                                                       help='Generate the augmentation data and features from the fasta file and bam files.')
     generate_aug_data_subparsers.add_argument('--contig_file', type=str, help=("The original contigs file."))
@@ -201,6 +203,7 @@ def arguments():
 
     #############################################################################################
     ############################################ cluster #####################################
+    ### Command-line arguments and options for running the Leiden-based clustering.
 
     clustering_subparsers = subparsers.add_parser('bin',
                                                   help='Cluster the contigs.')
@@ -227,6 +230,7 @@ def arguments():
 
     #############################################################################################
     ############################################ get final results #####################################
+    ### Command-line arguments and options for generating the final binning result from the Leiden clustering results.
 
     get_result_subparsers = subparsers.add_parser('get_result',
                                                   help='Generate the final results from the Leiden clustering results.')
@@ -250,6 +254,20 @@ def arguments():
 
 
 def main():
+    """
+    The main function of the COMEBin program.
+    Args:
+        None (Uses command-line arguments for configuration)
+
+    Returns:
+        None
+
+    Functionality:
+        - Initializes logging for the program.
+        - Executes different subcommands based on user input.
+        - Subcommands include: 'train', 'bin', 'nocontrast', 'generate_aug_data', and 'get_result'.
+        - Subcommands perform various tasks such as data augmentation, training and clustering.
+    """
     args = arguments()
 
     # logging
