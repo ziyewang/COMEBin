@@ -180,67 +180,6 @@ def fit_hnsw_index(logger,features, ef=100, M=16, space='l2', save_index_file=Fa
     return p
 
 
-def cluster_hnswlib_leiden(logger, max_edges, norm_embeddings, p, namelist, num_process=40, percentile=5, bandwidth=None, lmode='l1', initial_membership=None, resolution_parameter=1.0,add_lengthweight=False, resultfile=None ):
-    time_start = time.time()
-    ann_neighbor_indices, ann_distances = p.knn_query(norm_embeddings, max_edges+1)
-    #ann_distances是l2 distance的平方
-    time_end = time.time()
-    logger.info('knn query time cost:\t' +str(time_end - time_start) + "s")
-    sources = np.repeat(np.arange(len(norm_embeddings)), max_edges)
-    targets_indices = ann_neighbor_indices[:,1:]
-    targets = targets_indices.flatten()
-    wei = ann_distances[:,1:]
-    wei = wei.flatten()
-
-    if lmode == 'l1':
-        wei = np.sqrt(wei)
-        if not bandwidth:
-            bandwidth = np.percentile(wei, percentile)
-        wei = np.exp(-wei / bandwidth)
-
-    if lmode == 'l2':
-        if not bandwidth:
-            bandwidth = np.percentile(wei, percentile)
-        wei = np.exp(-wei / bandwidth)
-
-    logger.info("bandwidth:\t" +str(bandwidth))
-
-    index = sources > targets
-    sources = sources[index]
-    targets = targets[index]
-    wei = wei[index]
-    vcount = len(norm_embeddings)
-    edgelist = list(zip(sources, targets))
-    g = Graph(vcount, edgelist)
-
-    if resultfile:
-        res = {}
-        with open(resultfile) as f:
-            for line in f:
-                contigname, clusterid = line.rstrip('\n').split('\t')
-                res[contigname] = int(clusterid)
-            print(contigname)
-            print(clusterid)
-
-        initial_list = []
-        for i in range(len(namelist)):
-            initial_list.append(res[namelist[i]])
-
-        res = leidenalg.find_partition(g , leidenalg.RBConfigurationVertexPartition ,
-                                       weights=wei , initial_membership = initial_list,
-                                       resolution_parameter = resolution_parameter , n_iterations = -1)
-
-    else:
-        res = leidenalg.find_partition(g , leidenalg.RBConfigurationVertexPartition ,
-                                       weights=wei , initial_membership = None,
-                                       resolution_parameter = resolution_parameter , n_iterations = -1)
-
-    part = list(res)
-
-    return part, bandwidth
-
-
-
 def run_leiden(output_file, namelist,
                ann_neighbor_indices, ann_distances,length_weight, max_edges, norm_embeddings, percentile=5, bandwidth=None, lmode='l2', initial_list=None,is_membership_fixed=None, resolution_parameter=1.0,partgraph_ratio=50 ):
     sources = np.repeat(np.arange(len(norm_embeddings)), max_edges)
