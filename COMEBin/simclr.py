@@ -203,7 +203,6 @@ class SimCLR(object):
         # logging.info(f"Training with cpu: {self.args.disable_cuda}.")
         if self.args.kmer_model_path == 'empty':
             kmer_len = 136
-
         else:
             kmer_len = 128
         logging.info('kmer_len:\t' + str(kmer_len) + '\n')
@@ -279,17 +278,6 @@ class SimCLR(object):
                         epoch_loss += loss.data.item()
 
 
-
-                # if n_iter % self.args.log_every_n_steps == 0:
-                #     top1, top5 = accuracy(logits, labels, topk=(1, 5))
-                #
-                #     self.writer.add_scalar('loss', loss, global_step=n_iter)
-                #     self.writer.add_scalar('acc/top1', top1[0], global_step=n_iter)
-                #     self.writer.add_scalar('acc/top5', top5[0], global_step=n_iter)
-                #     self.writer.add_scalar('learning_rate', self.scheduler.get_lr()[0], global_step=n_iter)
-                #
-                # n_iter += 1
-
             top1, top5 = accuracy(logits, labels, topk=(1, 5))
 
             if not self.args.notuse_scheduler:
@@ -328,7 +316,7 @@ class SimCLR(object):
         }, is_best=False, filename=os.path.join(self.args.output_path, checkpoint_name))
         logging.info(f"Model checkpoint and metadata has been saved at {self.args.output_path}.")
 
-        # ckpt = torch.load('/home/wzy/tools/a_for_new_method/merge/CLRBin/runs/Feb18_01-08-05_ZzStudio-7048-4x1080/checkpoint_0200.pth.tar')
+        # ckpt = torch.load('/checkpoint_0200.pth.tar')
 
         with torch.no_grad():
             self.model.eval()
@@ -382,14 +370,6 @@ class SimCLR(object):
                 scaler.step(self.optimizer)
                 scaler.update()
 
-                # if n_iter % self.args.log_every_n_steps == 0:
-                #     top1, top5 = accuracy(logits, labels, topk=(1, 5))
-                #     self.writer.add_scalar('loss', loss, global_step=n_iter)
-                #     self.writer.add_scalar('acc/top1', top1[0], global_step=n_iter)
-                #     self.writer.add_scalar('acc/top5', top5[0], global_step=n_iter)
-                #     self.writer.add_scalar('learning_rate', self.scheduler.get_lr()[0], global_step=n_iter)
-                #
-                # n_iter += 1
 
             top1, top5 = accuracy(logits, labels, topk=(1, 5))
 
@@ -418,5 +398,5 @@ class SimCLR(object):
         }, is_best=False, filename=os.path.join(self.args.output_path, checkpoint_name))
         logging.info(f"Model checkpoint and metadata has been saved at {self.args.output_path}.")
 
-        # ckpt = torch.load('/home/wzy/tools/a_for_new_method/merge/CLRBin/runs/Feb18_21-03-32_ZzStudio-7048-4x1080/checkpoint_0200.pth.tar')
+        # ckpt = torch.load('checkpoint_0200.pth.tar')
         # self.model.load_state_dict(ckpt['state_dict'])
