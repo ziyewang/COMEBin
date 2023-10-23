@@ -17,6 +17,9 @@ torch.manual_seed(0)
 class SimCLR(object):
 
     def __init__(self, *args, **kwargs):
+        """
+        Initialize the SimCLR model and related components.
+        """
         self.args = kwargs['args']
         self.model = kwargs['model'].to(self.args.device)
         self.optimizer = kwargs['optimizer']
@@ -26,7 +29,6 @@ class SimCLR(object):
         self.criterion = torch.nn.CrossEntropyLoss().to(self.args.device)
 
     def info_nce_loss(self, features):
-
         labels = torch.cat([torch.arange(self.args.batch_size) for i in range(self.args.n_views)], dim=0)
         labels = (labels.unsqueeze(0) == labels.unsqueeze(1)).float()
         labels = labels.to(self.args.device)
@@ -41,7 +43,6 @@ class SimCLR(object):
         similarity_matrix = similarity_matrix[~mask].view(similarity_matrix.shape[0], -1)
         # assert similarity_matrix.shape == labels.shape
 
-        # changed!!
         # select and combine multiple positives
         positives = similarity_matrix[labels.bool()].view(-1, 1)
         # select only the negatives the negatives
@@ -70,7 +71,6 @@ class SimCLR(object):
         similarity_matrix = similarity_matrix[~mask].view(similarity_matrix.shape[0], -1)
         # assert similarity_matrix.shape == labels.shape
 
-        # changed!!
         # select and combine multiple positives
         positives = similarity_matrix[labels.bool()].view(-1, 1)
         # select only the negatives the negatives
@@ -99,7 +99,6 @@ class SimCLR(object):
         similarity_matrix = similarity_matrix[~mask].view(similarity_matrix.shape[0], -1)
         # assert similarity_matrix.shape == labels.shape
 
-        # changed!!
         # select and combine multiple positives
         positives = similarity_matrix[labels.bool()].view(-1, 1)
         # select only the negatives the negatives
@@ -143,15 +142,6 @@ class SimCLR(object):
                 scaler.step(self.optimizer)
                 scaler.update()
 
-                # if n_iter % self.args.log_every_n_steps == 0:
-                #     top1, top5 = accuracy(logits, labels, topk=(1, 5))
-                #     self.writer.add_scalar('loss', loss, global_step=n_iter)
-                #     self.writer.add_scalar('acc/top1', top1[0], global_step=n_iter)
-                #     self.writer.add_scalar('acc/top5', top5[0], global_step=n_iter)
-                #     self.writer.add_scalar('learning_rate', self.scheduler.get_lr()[0], global_step=n_iter)
-                #
-                # n_iter += 1
-
             top1, top5 = accuracy(logits, labels, topk=(1, 5))
             if not self.args.notuse_scheduler:
                 # warmup for the first 10 epochs
@@ -179,7 +169,7 @@ class SimCLR(object):
         }, is_best=False, filename=os.path.join(self.args.output_path, checkpoint_name))
         logging.info(f"Model checkpoint and metadata has been saved at {self.args.output_path}.")
 
-        # ckpt = torch.load('/home/wzy/tools/a_for_new_method/merge/CLRBin/runs/Feb18_21-03-32_ZzStudio-7048-4x1080/checkpoint_0200.pth.tar')
+        # ckpt = torch.load('checkpoint_0200.pth.tar')
         # self.model.load_state_dict(ckpt['state_dict'])
 
         with torch.no_grad():
@@ -229,8 +219,6 @@ class SimCLR(object):
                             features, covemb = self.model(contig_features[:, -kmer_len:], contig_features[:, :-kmer_len])
                             # print(contig_features[:2, :-kmer_len])
 
-                    # print(len(features[0]))
-                        # print(len(covemb[0]))
                         logits, labels = self.info_nce_loss(features)
                         loss1 = self.criterion(logits, labels)
                         logits2, labels2 = self.covmodel_info_nce_loss(covemb)
