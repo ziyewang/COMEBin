@@ -35,8 +35,16 @@ def read_bins_nosequences(bin_dirs):
 
 
 # update for checkm marker
-def get_bin_quality(orig_bins, methods_sorted, markers):
-    # calculate quality of each bin of the orig_bins.
+def get_bin_quality(orig_bins: Dict[str, Dict[int, List[int]]], methods_sorted: List[str], markers: List[int]):
+    """
+    Calculate the quality of each bin in the original bins and determine the best method.
+
+    :param orig_bins: A dictionary of original bins with method IDs as keys and bin IDs as sub-keys.
+    :param methods_sorted: A list of method IDs sorted in a specific order.
+    :param markers: A list of markers used for bin quality calculations.
+
+    :return: A tuple containing a dictionary of bin quality information and the best method.
+    """
     bin_quality_dict = defaultdict(lambda: {})
     sum_list = []
     sumcont5_list = []
@@ -95,7 +103,17 @@ def get_bin_quality(orig_bins, methods_sorted, markers):
 
 
 # update for checkm marker
-def savecontigs_with_high_bin_quality(orig_bins, best_method, markers, outpath):
+def savecontigs_with_high_bin_quality(orig_bins: Dict[str, Dict[int, List[int]]],
+                                    best_method: str, markers: List[int], outpath: str):
+    """
+    Save contigs with high bin quality to text files based on specified criteria.
+
+    :param orig_bins: A dictionary of original bins with method IDs as keys and bin IDs as sub-keys.
+    :param best_method: The best method to consider.
+    :param markers: A list of markers used for bin quality calculations.
+    :param outpath: The path to save the output text files.
+    :return: None
+    """
     bin_count_5010 = 0
     bin_count_5005 = 0
     with open(outpath+'/'+best_method+'5010_res.txt','w') as f1:
@@ -127,43 +145,6 @@ def write_estimated_bin_quality(bin_quality_dict, output_file):
                    + str(bin_quality_dict[method_id]['sum_cont5']) + '\n')
 
     fout.close()
-
-
-def estimate_bins_quality(bac_mg_table, ar_mg_table, res_path, ignore_kmeans_res = False):
-    markers = Markers()
-
-    # bin_dirs = get_bin_dirs(bin_dirs_file)
-    filenames = os.listdir(res_path)
-    namelist = []
-    for filename in filenames:
-        if filename.endswith('.tsv'):
-            if ignore_kmeans_res:
-                if not filename.startswith('weight'):
-                    namelist.append(filename)
-            else:
-                namelist.append(filename)
-
-    namelist.sort()
-
-    bin_dirs = {}
-    for res in namelist:
-        bin_dirs[res] = (res_path + res + '_bins', 'fa')
-
-    bins, contigs, contigs_in_bins = read_bins(bin_dirs)
-
-    methods_sorted = sorted(bins.keys())
-    contig_lens = {cid: len(contigs[cid]) for cid in contigs}
-    orig_bins = copy.deepcopy(bins)
-
-    gene_tables = markers.marker_gene_tables(bac_mg_table, ar_mg_table)
-
-    bin_quality_dict, best_method = get_bin_quality(orig_bins, methods_sorted, markers)
-
-    savecontigs_with_high_bin_quality(orig_bins, best_method, markers, res_path)
-
-    output_file = res_path + 'estimate_res.txt'
-    write_estimated_bin_quality(bin_quality_dict, output_file)
-    return best_method
 
 
 def estimate_bins_quality_nobins(bac_mg_table, ar_mg_table, res_path, ignore_kmeans_res = False):
@@ -208,7 +189,6 @@ def run_get_final_result(logger, args, seed_num, num_threads=40,res_name=None,ig
 
     if not (args.bac_mg_table and args.ar_mg_table):
         logger.info("Run unitem profile:\t" + str(seed_num))
-        # run unitem_profile
         bin_dirs = {}
         if res_name==None:
             res_name = 'weight_seed_kmeans_k_' + str(seed_num + 1) + '_result.tsv'
@@ -228,7 +208,6 @@ def run_get_final_result(logger, args, seed_num, num_threads=40,res_name=None,ig
         bac_mg_table = args.bac_mg_table
         ar_mg_table = args.ar_mg_table
 
-    # best_method = estimate_bins_quality(bac_mg_table, ar_mg_table, args.output_path + '/cluster_res/',ignore_kmeans_res=ignore_kmeans_res)
     best_method = estimate_bins_quality_nobins(bac_mg_table, ar_mg_table, args.output_path + '/cluster_res/',ignore_kmeans_res=ignore_kmeans_res)
 
     logger.info('Final result:\t'+args.output_path + '/cluster_res/'+best_method)
