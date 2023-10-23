@@ -1,6 +1,3 @@
-from igraph import Graph
-from sklearn.preprocessing import normalize
-
 import hnswlib
 import leidenalg
 import numpy as np
@@ -11,10 +8,12 @@ import os
 import scipy.sparse as sp
 import logging
 
+from igraph import Graph
+from sklearn.preprocessing import normalize
+from sklearn.cluster._kmeans import euclidean_distances, stable_cumsum, KMeans, check_random_state, row_norms, MiniBatchKMeans
+
 from utils import get_length, calculateN50, save_result
 from scripts.gen_bins_from_tsv import gen_bins as gen_bins_from_tsv
-
-from sklearn.cluster._kmeans import euclidean_distances, stable_cumsum, KMeans, check_random_state, row_norms, MiniBatchKMeans
 
 
 logger = logging.getLogger('COMEBin')
@@ -30,27 +29,55 @@ console_hdr.setFormatter(formatter)
 logger.addHandler(console_hdr)
 
 
+def fit_hnsw_index(logger,features, ef=100, M=16, space='l2', save_index_file=False):
+    # Convenience function to create HNSW graph
+    # features : list of lists containing the embeddings
+    # ef, M: parameters to tune the HNSW algorithm
+    time_start = time.time()
+    num_elements = len(features)
+    labels_index = np.arange(num_elements)
+    EMBEDDING_SIZE = len(features[0])
 
-def seed_kmeans_full(logger, contig_file, namelist, out_path, X_mat, bin_number, prefix, length_weight, seed_bacar_marker_url, rand_num=5):
+    # Declaring index
+    # possible space options are l2, cosine or ip
+    p = hnswlib.Index(space=space, dim=EMBEDDING_SIZE)
+
+    # Initing index - the maximum number of elements should be known
+    p.init_index(max_elements=num_elements, ef_construction=ef, M=M)
+
+    # Element insertion
+    int_labels = p.add_items(features, labels_index)
+
+    # Controlling the recall by setting ef
+    # ef should always be > k
+    p.set_ef(ef)
+
+    # If you want to save the graph to a file
+    if save_index_file:
+        p.save_index(save_index_file)
+    time_end = time.time()
+    logger.info('Time cost:\t' +str(time_end - time_start) + "s")
+    return p
+
+
+def seed_kmeans_full(logger, contig_file, namelist, out_path, X_mat, bin_number, prefix, length_weight, seed_bacar_marker_url):
     out_path = out_path + prefix
     seed_bacar_marker_idx = gen_seed_idx(seed_bacar_marker_url, contig_id_list=namelist)
     time_start = time.time()
-    for i in range(rand_num):
-        logger.info(i)
-        # run partial seed kmeans marker1_seed length weight
-        output_temp = out_path + '_algofull_rand_' + str(i + 1) + '_k_' + str(
-            bin_number) + '_result.tsv'
-        if not (os.path.exists(output_temp)):
-            km = KMeans(n_clusters=bin_number, n_jobs=-1, random_state=7, algorithm="full",
-                        init=functools.partial(partial_seed_init, seed_idx=seed_bacar_marker_idx))
-            km.fit(X_mat, sample_weight=length_weight)
-            idx = km.labels_
-            save_result(idx, output_temp, namelist)
+    # run seed-kmeans; length weight
+    output_temp = out_path + '_k_' + str(
+        bin_number) + '_result.tsv'
+    if not (os.path.exists(output_temp)):
+        km = KMeans(n_clusters=bin_number, n_jobs=-1, random_state=7, algorithm="full",
+                    init=functools.partial(partial_seed_init, seed_idx=seed_bacar_marker_idx))
+        km.fit(X_mat, sample_weight=length_weight)
+        idx = km.labels_
+        save_result(idx, output_temp, namelist)
 
-            gen_bins_from_tsv(contig_file, output_temp, output_temp+'_bins')
+        gen_bins_from_tsv(contig_file, output_temp, output_temp+'_bins')
 
-            time_end = time.time()
-            logger.info("Running partial seed cost:\t"+str(time_end - time_start) + 's.')
+        time_end = time.time()
+        logger.info("Running partial seed cost:\t"+str(time_end - time_start) + 's.')
 
 
 def gen_seed_idx(seedURL, contig_id_list):
@@ -66,8 +93,6 @@ def gen_seed_idx(seedURL, contig_id_list):
 
 # change from sklearn.cluster.kmeans
 def partial_seed_init(X, n_clusters, random_state, seed_idx, n_local_trials=None):
-    print('Using partial seed')
-
     random_state = check_random_state(random_state)
     x_squared_norms = row_norms(X, squared=True)
 
@@ -149,37 +174,6 @@ def partial_seed_init(X, n_clusters, random_state, seed_idx, n_local_trials=None
     return centers
 
 
-def fit_hnsw_index(logger,features, ef=100, M=16, space='l2', save_index_file=False):
-    # Convenience function to create HNSW graph
-    # features : list of lists containing the embeddings
-    # ef, M: parameters to tune the HNSW algorithm
-    time_start = time.time()
-    num_elements = len(features)
-    labels_index = np.arange(num_elements)
-    EMBEDDING_SIZE = len(features[0])
-
-    # Declaring index
-    # possible space options are l2, cosine or ip
-    p = hnswlib.Index(space=space, dim=EMBEDDING_SIZE)
-
-    # Initing index - the maximum number of elements should be known
-    p.init_index(max_elements=num_elements, ef_construction=ef, M=M)
-
-    # Element insertion
-    int_labels = p.add_items(features, labels_index)
-
-    # Controlling the recall by setting ef
-    # ef should always be > k
-    p.set_ef(ef)
-
-    # If you want to save the graph to a file
-    if save_index_file:
-        p.save_index(save_index_file)
-    time_end = time.time()
-    logger.info('Time cost:\t' +str(time_end - time_start) + "s")
-    return p
-
-
 def run_leiden(output_file, namelist,
                ann_neighbor_indices, ann_distances,length_weight, max_edges, norm_embeddings, percentile=5, bandwidth=None, lmode='l2', initial_list=None,is_membership_fixed=None, resolution_parameter=1.0,partgraph_ratio=50 ):
     sources = np.repeat(np.arange(len(norm_embeddings)), max_edges)
@@ -221,10 +215,6 @@ def run_leiden(output_file, namelist,
     optimiser = leidenalg.Optimiser()
     optimiser.optimise_partition(res, is_membership_fixed=is_membership_fixed,n_iterations=-1)
 
-    # diff = 1
-    # while diff > 0:
-    #     diff = optimiser.optimise_partition(res, is_membership_fixed=is_membership_fixed,n_iterations=-1)
-
     part = list(res)
 
 
@@ -238,7 +228,7 @@ def run_leiden(output_file, namelist,
         for id in part[ci]:
             contig_labels_dict[namelist[id]] = 'group'+str(ci)
 
-    print(output_file)
+    logger.info(output_file)
     f = open(output_file, 'w')
     for contigIdx in range(len(contig_labels_dict)):
         f.write(namelist[contigIdx] + "\t" + str(contig_labels_dict[namelist[contigIdx]]) + "\n")
@@ -292,11 +282,11 @@ def cluster(logger, args, prefix=None):
     seed_namelist = pd.read_csv(seed_file, header=None, sep='\t', usecols=range(1)).values[:, 0]
     seed_num = len(np.unique(seed_namelist))
 
-    mode = 'weight_partialseed_kmeans'
+    mode = 'weight_seed_kmeans'
     if prefix:
         mode = mode + '_' + prefix
-    logger.info("Run partial seed k-means.")
-    bin_nums = [seed_num + 1]
+    logger.info("Run seed k-means.")
+    bin_nums = [seed_num]
 
     if args.cluster_num:
         bin_nums.append(args.cluster_num)
@@ -304,7 +294,7 @@ def cluster(logger, args, prefix=None):
     logger.info("Bin_numbers:\t"+str(bin_nums))
     for k in bin_nums:
         logger.info(k)
-        seed_kmeans_full(logger, contig_file, namelist, output_path, norm_embeddings, k, mode, length_weight, seed_file, rand_num=1)
+        seed_kmeans_full(logger, contig_file, namelist, output_path, norm_embeddings, k, mode, length_weight, seed_file)
 
     import multiprocessing
 

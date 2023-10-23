@@ -211,7 +211,7 @@ def run_get_final_result(logger, args, seed_num, num_threads=40,res_name=None,ig
         # run unitem_profile
         bin_dirs = {}
         if res_name==None:
-            res_name = 'weight_partialseed_kmeans_algofull_rand_1_k_' + str(seed_num + 1) + '_result.tsv'
+            res_name = 'weight_seed_kmeans_k_' + str(seed_num + 1) + '_result.tsv'
         bin_dirs[res_name] = (args.output_path + '/cluster_res/' + res_name + '_bins', 'fa')
 
         output_dir = args.output_path + '/cluster_res/unitem_profile'
