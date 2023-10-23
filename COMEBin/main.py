@@ -9,6 +9,11 @@ from cluster_clean import cluster
 
 
 def arguments():
+    """
+    COMEBin: A contig binning method based on Contrastive Multi-view representation learning.
+
+    :return: Parsed command-line arguments
+    """
     doc = f"""COMEBin: a contig binning method based on COntrastive Multi-viEw representation learning.
     Version:{ver}"""
     parser = argparse.ArgumentParser(
@@ -28,6 +33,8 @@ def arguments():
 
     #############################################################################################
     ############################################ CLtraining #####################################
+    ### Command-line arguments and options for training the network.
+
     CLtraining_subparsers = subparsers.add_parser('train',
                                                   help='Train the model based on the augmentation data')
 
@@ -84,8 +91,6 @@ def arguments():
     CLtraining_subparsers.add_argument('--earlystop', action="store_true",
                                        help='earlystop.')
 
-    # CLtraining_subparsers.add_argument('--finetune_kmermetric', action="store_true",
-    #                     help='finetune_kmermetric')
     CLtraining_subparsers.add_argument('--pretrain_kmer_model_path', metavar='DIR', default='no',
                         help='pretrain_kmer_model_path')
 
@@ -153,6 +158,8 @@ def arguments():
 
     #############################################################################################
     ############################################ cluster NoContrast #####################################
+    ### Command-line arguments and options for running the COMEBin using the original features.
+
     NoContrast_subparsers = subparsers.add_parser('nocontrast',
                                                    help='Cluster the contigs using original features.')
 
@@ -172,32 +179,6 @@ def arguments():
                                        help='Do not run l2normaize for embeddings.')
 
     NoContrast_subparsers.add_argument('--contig_len', default = 1001, type=int, metavar='N',
-                                       help='mininum contig length for clustering')
-
-
-    #############################################################################################
-    ############################################ cluster onlyKmerMetric #####################################
-    OnlyKmerMetric_subparsers = subparsers.add_parser('onlykmermetric',
-                                                  help='Cluster the contigs using KmerMetric embedding.')
-
-    OnlyKmerMetric_subparsers.add_argument('--contig_file', type=str, help=("The contigs file."))
-    OnlyKmerMetric_subparsers.add_argument('--seed_file', type=str, help=("The marker seed file."))
-    OnlyKmerMetric_subparsers.add_argument('--data', metavar='DIR', default='/home/wzy/data/STEC_data/for_new_method/data_augmentation_clean/',
-                                       help='path to dataset')
-    OnlyKmerMetric_subparsers.add_argument('--output_path', type=str, default='temp_output', help=("The output path"))
-
-    OnlyKmerMetric_subparsers.add_argument('--cluster_num', default=0, type=int,
-                                       help='Add cluster number to run partial seed method (default: 0)')
-
-    OnlyKmerMetric_subparsers.add_argument('--not_run_infomap', action='store_true',
-                                       help='Do not run infomap.')
-
-    OnlyKmerMetric_subparsers.add_argument('--not_l2normaize', action='store_true',
-                                       help='Do not run l2normaize for embeddings.')
-
-    OnlyKmerMetric_subparsers.add_argument('--kmer_model_path', metavar='DIR', default='empty',
-                                           help='kmer_model_path')
-    OnlyKmerMetric_subparsers.add_argument('--contig_len', default = 1001, type=int, metavar='N',
                                        help='mininum contig length for clustering')
 
 
@@ -360,23 +341,6 @@ def main():
         args.emb_file = args.output_path+'/compositMat_feature.tsv'
         cluster(logger,args)
 
-
-    ## clustering onlykmermetric
-    if args.subcmd == 'onlykmermetric':
-        logger.info('onlyKmerMetric mode: generate kmerMetric embeddings')
-        from utils import get_kmer_coverage_aug0,get_kmerMetric_emb
-
-        _, _, compositMat, namelist = get_kmer_coverage_aug0(args.data)
-        compositMat = get_kmerMetric_emb(args.kmer_model_path, compositMat)
-
-        compositMat_df = pd.DataFrame(compositMat, index=namelist)
-        os.makedirs(args.output_path, exist_ok=True)
-        outfile = args.output_path+'/kmerMetric_emb_feature.tsv'
-        compositMat_df.to_csv(outfile, sep='\t', header=True)
-
-        logger.info('onlyKmerMetric mode: bin')
-        args.emb_file = args.output_path+'/kmerMetric_emb_feature.tsv'
-        cluster(logger,args)
 
 
     ##### generate_aug_data fastafile
