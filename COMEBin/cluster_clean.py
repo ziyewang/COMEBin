@@ -1,33 +1,23 @@
 from igraph import Graph
-
 from sklearn.preprocessing import normalize
 
-# import warnings
-# warnings.filterwarnings('ignore')
-
 import hnswlib
-
-from utils import get_length, calculateN50, save_result
-
-from scripts.gen_bins_from_tsv import gen_bins as gen_bins_from_tsv
-
 import leidenalg
-
-
 import numpy as np
 import pandas as pd
 import functools
 import time
-
 import os
-
+import scipy.sparse as sp
 import logging
 
-import scipy.sparse as sp
+from utils import get_length, calculateN50, save_result
+from scripts.gen_bins_from_tsv import gen_bins as gen_bins_from_tsv
+
 from sklearn.cluster._kmeans import euclidean_distances, stable_cumsum, KMeans, check_random_state, row_norms, MiniBatchKMeans
 
 
-logger = logging.getLogger('Comebin')
+logger = logging.getLogger('COMEBin')
 
 logger.setLevel(logging.INFO)
 
@@ -61,9 +51,6 @@ def seed_kmeans_full(logger, contig_file, namelist, out_path, X_mat, bin_number,
 
             time_end = time.time()
             logger.info("Running partial seed cost:\t"+str(time_end - time_start) + 's.')
-
-        # if not (os.path.exists(output_temp+'_bins')):
-        #     gen_bins_from_tsv(contig_file, output_temp, output_temp+'_bins')
 
 
 def gen_seed_idx(seedURL, contig_id_list):
@@ -319,203 +306,6 @@ def run_leiden(output_file, namelist,
     f.close()
 
 
-def run_leiden_nolength(output_file, namelist,
-               ann_neighbor_indices, ann_distances,length_weight, max_edges, norm_embeddings, percentile=5, bandwidth=None, lmode='l2', initial_list=None,is_membership_fixed=None, resolution_parameter=1.0,partgraph_ratio=50 ):
-    sources = np.repeat(np.arange(len(norm_embeddings)), max_edges)
-    targets_indices = ann_neighbor_indices[:,1:]
-    targets = targets_indices.flatten()
-    wei = ann_distances[:,1:]
-    wei = wei.flatten()
-
-    dist_cutoff = np.percentile(wei, partgraph_ratio)
-    save_index = wei <= dist_cutoff
-
-    sources = sources[save_index]
-    targets = targets[save_index]
-    wei = wei[save_index]
-
-    if lmode == 'l1':
-        wei = np.sqrt(wei)
-        if not bandwidth:
-            bandwidth = np.percentile(wei, percentile)
-        wei = np.exp(-wei / bandwidth)
-
-    if lmode == 'l2':
-        if not bandwidth:
-            bandwidth = np.percentile(wei, percentile)
-        wei = np.exp(-wei / bandwidth)
-
-    index = sources > targets
-    sources = sources[index]
-    targets = targets[index]
-    wei = wei[index]
-    vcount = len(norm_embeddings)
-    edgelist = list(zip(sources, targets))
-    g = Graph(vcount, edgelist)
-
-    res = leidenalg.RBERVertexPartition(g,
-                                        weights=wei, initial_membership = initial_list,
-                                        resolution_parameter = resolution_parameter)
-
-    optimiser = leidenalg.Optimiser()
-    optimiser.optimise_partition(res, is_membership_fixed=is_membership_fixed,n_iterations=-1)
-
-    # diff = 1
-    # while diff > 0:
-    #     diff = optimiser.optimise_partition(res, is_membership_fixed=is_membership_fixed,n_iterations=-1)
-
-    part = list(res)
-
-
-    contig_labels_dict ={}
-    # dict of communities
-    numnode = 0
-    rang = []
-    for ci in range(len(part)):
-        rang.append(ci)
-        numnode = numnode+len(part[ci])
-        for id in part[ci]:
-            contig_labels_dict[namelist[id]] = 'group'+str(ci)
-
-    print(output_file)
-    f = open(output_file, 'w')
-    for contigIdx in range(len(contig_labels_dict)):
-        f.write(namelist[contigIdx] + "\t" + str(contig_labels_dict[namelist[contigIdx]]) + "\n")
-    f.close()
-
-
-def run_leiden_nomarker(output_file, namelist,
-               ann_neighbor_indices, ann_distances,length_weight, max_edges, norm_embeddings, percentile=5, bandwidth=None, lmode='l2', initial_list=None,is_membership_fixed=None, resolution_parameter=1.0,partgraph_ratio=50 ):
-    sources = np.repeat(np.arange(len(norm_embeddings)), max_edges)
-    targets_indices = ann_neighbor_indices[:,1:]
-    targets = targets_indices.flatten()
-    wei = ann_distances[:,1:]
-    wei = wei.flatten()
-
-    dist_cutoff = np.percentile(wei, partgraph_ratio)
-    save_index = wei <= dist_cutoff
-
-    sources = sources[save_index]
-    targets = targets[save_index]
-    wei = wei[save_index]
-
-    if lmode == 'l1':
-        wei = np.sqrt(wei)
-        if not bandwidth:
-            bandwidth = np.percentile(wei, percentile)
-        wei = np.exp(-wei / bandwidth)
-
-    if lmode == 'l2':
-        if not bandwidth:
-            bandwidth = np.percentile(wei, percentile)
-        wei = np.exp(-wei / bandwidth)
-
-    index = sources > targets
-    sources = sources[index]
-    targets = targets[index]
-    wei = wei[index]
-    vcount = len(norm_embeddings)
-    edgelist = list(zip(sources, targets))
-    g = Graph(vcount, edgelist)
-
-    res = leidenalg.RBERVertexPartition(g,
-                                        weights=wei,
-                                        resolution_parameter = resolution_parameter,node_sizes=length_weight)
-
-    optimiser = leidenalg.Optimiser()
-    optimiser.optimise_partition(res,n_iterations=-1)
-
-    # diff = 1
-    # while diff > 0:
-    #     diff = optimiser.optimise_partition(res, is_membership_fixed=is_membership_fixed,n_iterations=-1)
-
-    part = list(res)
-
-
-    contig_labels_dict ={}
-    # dict of communities
-    numnode = 0
-    rang = []
-    for ci in range(len(part)):
-        rang.append(ci)
-        numnode = numnode+len(part[ci])
-        for id in part[ci]:
-            contig_labels_dict[namelist[id]] = 'group'+str(ci)
-
-    print(output_file)
-    f = open(output_file, 'w')
-    for contigIdx in range(len(contig_labels_dict)):
-        f.write(namelist[contigIdx] + "\t" + str(contig_labels_dict[namelist[contigIdx]]) + "\n")
-    f.close()
-
-
-def run_leiden_nomarker_nolength(output_file, namelist,
-                        ann_neighbor_indices, ann_distances,length_weight, max_edges, norm_embeddings, percentile=5, bandwidth=None, lmode='l2', initial_list=None,is_membership_fixed=None, resolution_parameter=1.0,partgraph_ratio=50 ):
-    sources = np.repeat(np.arange(len(norm_embeddings)), max_edges)
-    targets_indices = ann_neighbor_indices[:,1:]
-    targets = targets_indices.flatten()
-    wei = ann_distances[:,1:]
-    wei = wei.flatten()
-
-    dist_cutoff = np.percentile(wei, partgraph_ratio)
-    save_index = wei <= dist_cutoff
-
-    sources = sources[save_index]
-    targets = targets[save_index]
-    wei = wei[save_index]
-
-    if lmode == 'l1':
-        wei = np.sqrt(wei)
-        if not bandwidth:
-            bandwidth = np.percentile(wei, percentile)
-        wei = np.exp(-wei / bandwidth)
-
-    if lmode == 'l2':
-        if not bandwidth:
-            bandwidth = np.percentile(wei, percentile)
-        wei = np.exp(-wei / bandwidth)
-
-    index = sources > targets
-    sources = sources[index]
-    targets = targets[index]
-    wei = wei[index]
-    vcount = len(norm_embeddings)
-    edgelist = list(zip(sources, targets))
-    g = Graph(vcount, edgelist)
-
-    res = leidenalg.RBERVertexPartition(g,
-                                        weights=wei,
-                                        resolution_parameter = resolution_parameter)
-
-    optimiser = leidenalg.Optimiser()
-    optimiser.optimise_partition(res,n_iterations=-1)
-
-    # diff = 1
-    # while diff > 0:
-    #     diff = optimiser.optimise_partition(res, is_membership_fixed=is_membership_fixed,n_iterations=-1)
-
-    part = list(res)
-
-
-    contig_labels_dict ={}
-    # dict of communities
-    numnode = 0
-    rang = []
-    for ci in range(len(part)):
-        rang.append(ci)
-        numnode = numnode+len(part[ci])
-        for id in part[ci]:
-            contig_labels_dict[namelist[id]] = 'group'+str(ci)
-
-    print(output_file)
-    f = open(output_file, 'w')
-    for contigIdx in range(len(contig_labels_dict)):
-        f.write(namelist[contigIdx] + "\t" + str(contig_labels_dict[namelist[contigIdx]]) + "\n")
-    f.close()
-
-
-
-
 def cluster(logger, args, prefix=None):
     logger.info("Start clustering.")
 
@@ -549,9 +339,6 @@ def cluster(logger, args, prefix=None):
     embMat = embMat[np.array(length_weight) >= contig_len]
     namelist = namelist[np.array(length_weight) >= contig_len]
     length_weight = list(np.array(length_weight)[np.array(length_weight) >= contig_len])
-
-    print(len(length_weight))
-    print(length_weight[:10])
 
     if args.not_l2normaize:
         norm_embeddings = embMat
@@ -620,104 +407,4 @@ def cluster(logger, args, prefix=None):
         print('multiprocess Done')
 
 
-    # ##### #########  hnswlib_method
-    # parameter_list = [1, 5,10,30,50,70, 90, 110]
-    # bandwidth_list = [0.05, 0.1,0.15, 0.2,0.3]
-    # partgraph_ratio_list =[50,100,80]
-    # max_edges_list = [100]
-    # for max_edges in max_edges_list:
-    #     p = fit_hnsw_index(logger, norm_embeddings, ef=max_edges * 10)
-    #     seed_bacar_marker_idx = gen_seed_idx(seed_file, contig_id_list=namelist)
-    #     initial_list = list(np.arange(len(namelist)))
-    #     is_membership_fixed = [i in seed_bacar_marker_idx for i in initial_list]
-    #
-    #     time_start = time.time()
-    #     ann_neighbor_indices, ann_distances = p.knn_query(norm_embeddings, max_edges+1)
-    #     time_end = time.time()
-    #     logger.info('knn query time cost:\t' +str(time_end - time_start) + "s")
-    #
-    #
-    #     with multiprocessing.Pool(num_workers) as multiprocess:
-    #         for partgraph_ratio in partgraph_ratio_list:
-    #             for bandwidth in bandwidth_list:
-    #                 for para in parameter_list:
-    #                     output_file = output_path + 'test3_parallel_leiden_RBERVertexPartition_nodesize_hnsw_l2mode_bandwidth_' + str(
-    #                         bandwidth) + '_res_maxedges' + str(max_edges) + 'respara_'+str(para)+'_partgraph_ratio_'+str(partgraph_ratio)+'.tsv'
-    #
-    #                     if not (os.path.exists(output_file)):
-    #                         multiprocess.apply_async(run_leiden_nomarker, (output_file, namelist, ann_neighbor_indices, ann_distances, length_weight, max_edges, norm_embeddings,
-    #                                                                       None, bandwidth, 'l2', initial_list,is_membership_fixed,
-    #                                                                       para, partgraph_ratio))
-    #
-    #         multiprocess.close()
-    #         multiprocess.join()
-    #     print('multiprocess Done')
-    #
-    #
-    # ##### #########  hnswlib_method
-    # parameter_list = [1, 5,10,30,50,70, 90, 110]
-    # bandwidth_list = [0.05, 0.1,0.15, 0.2,0.3]
-    # partgraph_ratio_list =[50,100,80]
-    # max_edges_list = [100]
-    # for max_edges in max_edges_list:
-    #     p = fit_hnsw_index(logger, norm_embeddings, ef=max_edges * 10)
-    #     seed_bacar_marker_idx = gen_seed_idx(seed_file, contig_id_list=namelist)
-    #     initial_list = list(np.arange(len(namelist)))
-    #     is_membership_fixed = [i in seed_bacar_marker_idx for i in initial_list]
-    #
-    #     time_start = time.time()
-    #     ann_neighbor_indices, ann_distances = p.knn_query(norm_embeddings, max_edges+1)
-    #     time_end = time.time()
-    #     logger.info('knn query time cost:\t' +str(time_end - time_start) + "s")
-    #
-    #
-    #     with multiprocessing.Pool(num_workers) as multiprocess:
-    #         for partgraph_ratio in partgraph_ratio_list:
-    #             for bandwidth in bandwidth_list:
-    #                 for para in parameter_list:
-    #                     output_file = output_path + 'test3_parallel_leiden_RBERVertexPartition_hnsw_l2mode_bandwidth_' + str(
-    #                         bandwidth) + '_res_maxedges' + str(max_edges) + 'respara_'+str(para)+'_partgraph_ratio_'+str(partgraph_ratio)+'.tsv'
-    #
-    #                     if not (os.path.exists(output_file)):
-    #                         multiprocess.apply_async(run_leiden_nomarker_nolength, (output_file, namelist, ann_neighbor_indices, ann_distances, length_weight, max_edges, norm_embeddings,
-    #                                                                        None, bandwidth, 'l2', initial_list,is_membership_fixed,
-    #                                                                        para, partgraph_ratio))
-    #
-    #         multiprocess.close()
-    #         multiprocess.join()
-    #     print('multiprocess Done')
-    #
-    #
-    # ##### #########  hnswlib_method
-    # parameter_list = [1, 5,10,30,50,70, 90, 110]
-    # bandwidth_list = [0.05,0.1,0.15, 0.2, 0.3]
-    # partgraph_ratio_list =[50,20,80]
-    # max_edges_list = [100]
-    # for max_edges in max_edges_list:
-    #     p = fit_hnsw_index(logger, norm_embeddings, ef=max_edges * 10)
-    #     seed_bacar_marker_idx = gen_seed_idx(seed_file, contig_id_list=namelist)
-    #     initial_list = list(np.arange(len(namelist)))
-    #     is_membership_fixed = [i in seed_bacar_marker_idx for i in initial_list]
-    #
-    #     time_start = time.time()
-    #     ann_neighbor_indices, ann_distances = p.knn_query(norm_embeddings, max_edges+1)
-    #     time_end = time.time()
-    #     logger.info('knn query time cost:\t' +str(time_end - time_start) + "s")
-    #
-    #
-    #     with multiprocessing.Pool(num_workers) as multiprocess:
-    #         for partgraph_ratio in partgraph_ratio_list:
-    #             for bandwidth in bandwidth_list:
-    #                 for para in parameter_list:
-    #                     output_file = output_path + 'test3_parallel_leiden_markerseed_RBERVertexPartition_nolength_hnsw_l2mode_bandwidth_' + str(
-    #                         bandwidth) + '_res_maxedges' + str(max_edges) + 'respara_'+str(para)+'_partgraph_ratio_'+str(partgraph_ratio)+'.tsv'
-    #
-    #                     if not (os.path.exists(output_file)):
-    #                         multiprocess.apply_async(run_leiden_nolength, (output_file, namelist, ann_neighbor_indices, ann_distances, length_weight, max_edges, norm_embeddings,
-    #                                                                     None, bandwidth, 'l2', initial_list,is_membership_fixed,
-    #                                                                     para, partgraph_ratio))
-    #
-    #         multiprocess.close()
-    #         multiprocess.join()
-    #     print('multiprocess Done')
 
