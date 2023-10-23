@@ -29,19 +29,19 @@ console_hdr.setFormatter(formatter)
 logger.addHandler(console_hdr)
 
 
-def fit_hnsw_index(logger,features, ef=100, M=16, space='l2', save_index_file=False):
+def fit_hnsw_index(logger, features, ef: int = 100, M: int = 16,
+                   space: str = 'l2', save_index_file: bool = False) -> hnswlib.Index:
     """
     Fit an HNSW index with the given features using the HNSWlib library; Convenience function to create HNSW graph.
 
-    Parameters:
-    logger (Logger): The logger object for logging messages.
-    features (list of lists): A list of lists containing the embeddings.
-    ef (int), M (int): parameters to tune the HNSW algorithm
-    space (str): The space in which the index operates (default: 'l2').
-    save_index_file (str): The path to save the HNSW index file (optional).
+    :param logger: The logger object for logging messages.
+    :param features: A list of lists containing the embeddings.
+    :param ef: The ef parameter to tune the HNSW algorithm (default: 100).
+    :param M: The M parameter to tune the HNSW algorithm (default: 16).
+    :param space: The space in which the index operates (default: 'l2').
+    :param save_index_file: The path to save the HNSW index file (optional).
 
-    Returns:
-    hnswlib.Index: The HNSW index created using the given features.
+    :return: The HNSW index created using the given features.
 
     This function fits an HNSW index to the provided features, allowing efficient similarity search in high-dimensional spaces.
     """
@@ -79,17 +79,16 @@ def seed_kmeans_full(logger, contig_file: str, namelist: List[str], out_path: st
     Perform weighted seed-kmeans clustering with specified parameters.
 
     Parameters:
-    contig_file: The path to the contig file.
-    namelist: A list of contig names.
-    out_path: The output path for saving results.
-    X_mat: The input data matrix for clustering.
-    bin_number: The number of bins (clusters) to create.
-    prefix: A prefix to be added to the output file names.
-    length_weight: The weights for contig lengths.
-    seed_bacar_marker_url: The path to the seed markers used for initialization.
+    :param contig_file: The path to the contig file.
+    :param namelist: A list of contig names.
+    :param out_path: The output path for saving results.
+    :param X_mat: The input data matrix for clustering.
+    :param bin_number: The number of bins (clusters) to create.
+    :param prefix: A prefix to be added to the output file names.
+    :param length_weight: The weights for contig lengths.
+    :param seed_bacar_marker_url: The path to the seed markers used for initialization.
 
-    Returns:
-    None
+    :return: None
 
     This function performs weighted seed-based k-means clustering on the input data using specified parameters and saves the results.
     """
@@ -116,12 +115,9 @@ def gen_seed_idx(seedURL: str, contig_id_list: List[str]) -> List[int]:
     """
     Generate a list of indices corresponding to seed contig IDs from a given URL.
 
-    Args:
-        seedURL: The URL or path to the file containing seed contig names.
-        contig_id_list (List[str]): List of all contig IDs to match with the seed contig names.
-
-    Returns:
-        List: A list of indices that correspond to the positions of seed contig IDs in contig_id_list.
+    :param seedURL: The URL or path to the file containing seed contig names.
+    :param contig_id_list: List of all contig IDs to match with the seed contig names.
+    :return: List[int]
     """
     seed_list = []
     with open(seedURL) as f:
@@ -139,15 +135,14 @@ def partial_seed_init(X, n_clusters: int, random_state, seed_idx, n_local_trials
     Partial initialization of KMeans centers with seeds from seed_idx.
 
     Parameters:
-    - X: Features.
-    - n_clusters: The number of clusters.
-    - random_state: Determines random number generation for
-      centroid initialization. Use an int for reproducibility.
-    - seed_idx: Indices of seed points for initialization.
-    - n_local_trials: The number of local seeding trials. Default is None.
+    :param X: Features.
+    :param n_clusters: The number of clusters.
+    :param random_state: Determines random number generation for centroid initialization. Use an int for reproducibility.
+    :param seed_idx: Indices of seed points for initialization.
+    :param n_local_trials: The number of local seeding trials. Default is None.
 
     Returns:
-    - centers (ndarray): The initialized cluster centers.
+    :return centers (ndarray): The initialized cluster centers.
 
     This function initializes a KMeans clustering by partially seeding the centers with provided seeds.
     It is a modification of the KMeans initialization algorithm.
@@ -233,8 +228,32 @@ def partial_seed_init(X, n_clusters: int, random_state, seed_idx, n_local_trials
     return centers
 
 
-def run_leiden(output_file, namelist,
-               ann_neighbor_indices, ann_distances,length_weight, max_edges, norm_embeddings, bandwidth=0.1, lmode='l2', initial_list=None,is_membership_fixed=None, resolution_parameter=1.0,partgraph_ratio=50 ):
+def run_leiden(output_file: str, namelist: List[str],
+               ann_neighbor_indices: np.ndarray, ann_distances: np.ndarray,
+               length_weight: List[float], max_edges: int, norm_embeddings: np.ndarray,
+               bandwidth: float = 0.1, lmode: str = 'l2', initial_list: Optional[List[Union[int, None]]] = None,
+               is_membership_fixed: Optional[bool] = None, resolution_parameter: float = 1.0,
+               partgraph_ratio: int = 50):
+    """
+    Run Leiden community detection algorithm and save the results to an output file.
+
+    :param output_file: The path to the output file.
+    :param namelist: A list of contig names.
+    :param ann_neighbor_indices: Array of ANN neighbor indices.
+    :param ann_distances: Array of ANN distances.
+    :param length_weight: List of length weights.
+    :param max_edges: Maximum number of edges.
+    :param norm_embeddings: Array of normalized embeddings.
+    :param bandwidth: Bandwidth parameter (default: 0.1).
+    :param lmode: Distance mode ('l1' or 'l2', default: 'l2').
+    :param initial_list: Initial membership list (default: None).
+    :param is_membership_fixed: Whether membership is fixed (default: None).
+    :param resolution_parameter: Resolution parameter (default: 1.0).
+    :param partgraph_ratio: Partition graph ratio (default: 50).
+    
+    :return: None
+    """
+
     sources = np.repeat(np.arange(len(norm_embeddings)), max_edges)
     targets_indices = ann_neighbor_indices[:,1:]
     targets = targets_indices.flatten()
@@ -291,6 +310,13 @@ def run_leiden(output_file, namelist,
 
 
 def cluster(logger, args, prefix=None):
+    """
+    Cluster contigs and save the results.
+
+    :param args: Command-line arguments and settings.
+    :param prefix: A prefix for the clustering mode (optional).
+    :return: None
+    """
     logger.info("Start clustering.")
 
     emb_file = args.emb_file
