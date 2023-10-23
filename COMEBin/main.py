@@ -224,10 +224,6 @@ def arguments():
     clustering_subparsers.add_argument('--num_threads', default=10, type=int,
                                               help='num_threads for binning.')
 
-    #############################################################################################
-    ############################################ get final result #####################################
-    # get_final_bins_subparsers = subparsers.add_parser('get_final_bins',
-    #                                                 help='Get final binning result.')
 
     #############################################################################################
     ############################################ get final results #####################################
@@ -284,21 +280,11 @@ def main():
     if args.subcmd == 'bin':
         logger.info('bin')
         from utils import gen_seed
-        # from get_final_result import run_get_final_result
 
         num_threads = args.num_threads
         _ = gen_seed(logger, args.contig_file, num_threads, args.contig_len, marker_name="bacar_marker", quarter="2quarter")
-        # seed_num = gen_seed(logger, args.contig_file, num_threads, 10001, marker_name="bacar_marker", quarter="2quarter")
-        # cluster(logger,args)
+
         cluster(logger, args)
-
-        # seed_num2 = gen_seed(logger, args.contig_file, num_threads, 1001, marker_name="marker", quarter="2quarter")
-        # args.seed_file = args.contig_file+'.marker.2quarter_lencutoff_1001.seed'
-        # cluster(logger,args, "marker")
-
-        # run_get_final_result(logger, args, seed_num, num_threads)
-
-        ####get marker information using unitem_profile.py
 
 
     ## clustering NoContrast
@@ -365,8 +351,6 @@ def main():
         seed_num = gen_seed(logger, args.contig_file, num_threads, args.contig_len, marker_name="bacar_marker", quarter="2quarter")
 
         run_get_final_result(logger, args, seed_num, num_threads, ignore_kmeans_res=True)
-
-        ####get marker information using unitem_profile.py
 
 
 if __name__ == '__main__':
