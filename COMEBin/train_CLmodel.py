@@ -18,6 +18,9 @@ torch.backends.cudnn.deterministic = True
 
 
 def train_CLmodel(logger, args):
+    """
+    Train the Contrastive Learning model.
+    """
     if torch.cuda.is_available():
         args.device = torch.device('cuda')
         cudnn.deterministic = True

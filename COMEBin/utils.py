@@ -197,7 +197,18 @@ def file_len(fname):
             pass
     return i + 1
 
-def gen_seed(logger, contig_file, threads, contig_length_threshold, marker_name="marker", quarter="3quarter"):
+def gen_seed(logger, contig_file: str, threads: int, contig_length_threshold: int,
+             marker_name: str = "marker", quarter: str = "3quarter"):
+    """
+    Generate seed sequences from contigs using FragGeneScan, HMMsearch, and custom markers.
+
+    :param contig_file: Path to the input contig file.
+    :param threads: The number of threads to use for processing.
+    :param contig_length_threshold: The contig length threshold.
+    :param marker_name: The marker name (default: "marker").
+    :param quarter: The quarter identifier (default: "3quarter").
+    :return: The number of candidate seeds generated.
+    """
     fragScanURL = 'run_FragGeneScan.pl'
 
     hmmExeURL = 'hmmsearch'
