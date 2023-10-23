@@ -148,6 +148,16 @@ def write_estimated_bin_quality(bin_quality_dict, output_file):
 
 
 def estimate_bins_quality_nobins(bac_mg_table, ar_mg_table, res_path, ignore_kmeans_res = False):
+    """
+    Estimate the quality of bins based on SCG information.
+
+    :param bac_mg_table: The path to the marker gene table for bacteria.
+    :param ar_mg_table: The path to the marker gene table for archaea.
+    :param res_path: The path to the result files.
+    :param ignore_kmeans_res: Whether to ignore K-means results (default: False).
+
+    :return: The best method based on estimated bin quality.
+    """
     markers = Markers()
 
     # bin_dirs = get_bin_dirs(bin_dirs_file)
@@ -184,7 +194,16 @@ def estimate_bins_quality_nobins(bac_mg_table, ar_mg_table, res_path, ignore_kme
     return best_method
 
 
-def run_get_final_result(logger, args, seed_num, num_threads=40,res_name=None,ignore_kmeans_res=False):
+def run_get_final_result(logger, args, seed_num: int, num_threads: int = 40,
+                         res_name: Optional[str] = None, ignore_kmeans_res: bool = True):
+    """
+    Run the final step to get the best clustering result based on estimated bin quality.
+
+    :param seed_num: The seed number.
+    :param num_threads: The number of threads to use (default: 40).
+    :param res_name: The name of the result (default: None).
+    :param ignore_kmeans_res: Whether to ignore K-means results (default: True).
+    """
     logger.info("Seed_num:\t" + str(seed_num))
 
     if not (args.bac_mg_table and args.ar_mg_table):
