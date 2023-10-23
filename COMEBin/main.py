@@ -44,8 +44,6 @@ def arguments():
                         help='kmer_model_path')
     CLtraining_subparsers.add_argument('--output_path', metavar='DIR', default='output',
                                        help='Output path.')
-    CLtraining_subparsers.add_argument('--kmer', default='4mer',
-                        help='composition used', choices=['4mer', '345mer'])
     CLtraining_subparsers.add_argument('-j', '--workers', default=5, type=int, metavar='N',
                         help='number of data loading workers (default: 5)')
     CLtraining_subparsers.add_argument('--epochs', default=200, type=int, metavar='N',

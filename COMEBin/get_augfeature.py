@@ -5,20 +5,15 @@ from utils import get_kmerMetric_emb
 from sklearn.preprocessing import normalize
 
 
-def get_kmer_coverage(data_path, kmer='4mer', n_views=2, kmer_model_path='empty',
+def get_kmer_coverage(data_path, n_views=2, kmer_model_path='empty',
                       device=torch.device('cpu'), nokmer=False, cov_meannormalize=False, cov_minmaxnormalize=False, cov_standardization=False,addvars=False,vars_sqrt=False,kmer_l2_normalize=False,kmerMetric_notl2normalize=False):
-    # namelist = pd.read_csv(data_path + 'aug0_datacoverage_mean_edge75.tsv', sep='\t', usecols=range(1)).values[:, 0]
     namelist = pd.read_csv(data_path + 'aug0_datacoverage_mean.tsv', sep='\t', usecols=range(1)).values[:, 0]
 
     mapObj = dict(zip(namelist, range(len(namelist))))
     for view in range(n_views):
-        # cov_file = data_path + 'aug' + str(view) + '_datacoverage_mean_edge75.tsv'
         cov_file = data_path + 'aug' + str(view) + '_datacoverage_mean.tsv'
         if not nokmer:
-            if kmer == '4mer':
-                com_file = data_path + 'aug' + str(view) + '/kmer_4_f0.csv'
-            elif kmer == '345mer':
-                com_file = data_path + 'aug' + str(view) + '/kmer_merge345mer.csv'
+            com_file = data_path + 'aug' + str(view) + '/kmer_4_f0.csv'
 
         covHeader = pd.read_csv(cov_file, sep='\t', nrows=1)
         shuffled_covMat = pd.read_csv(cov_file, sep='\t', usecols=range(1, covHeader.shape[1])).values
@@ -115,12 +110,11 @@ def get_kmer_coverage(data_path, kmer='4mer', n_views=2, kmer_model_path='empty'
     return list(torch.split(torch.from_numpy(X_ts).float(), len(namelist))), namelist
 
 
-def get_ContrastiveLearningDataset(data_path, kmer='4mer', n_views=2, kmer_model_path='empty',
+def get_ContrastiveLearningDataset(data_path, n_views=2, kmer_model_path='empty',
                                    device=torch.device('cpu'),
                                    nokmer=False, cov_meannormalize=False, cov_minmaxnormalize=False, cov_standardization=False,
                                    addvars=False,vars_sqrt=False,kmer_l2_normalize=False, kmerMetric_notl2normalize=False):
-    # data_path='/home/wangzy/data/binning/STEC_data/output/for_new_method/data_augmentation/'
     if not data_path.endswith('/'):
         data_path = data_path + '/'
-    dataset, namelist = get_kmer_coverage(data_path, kmer, n_views, kmer_model_path, device, nokmer, cov_meannormalize, cov_minmaxnormalize, cov_standardization,addvars,vars_sqrt,kmer_l2_normalize,kmerMetric_notl2normalize)
+    dataset, namelist = get_kmer_coverage(data_path, n_views, kmer_model_path, device, nokmer, cov_meannormalize, cov_minmaxnormalize, cov_standardization,addvars,vars_sqrt,kmer_l2_normalize,kmerMetric_notl2normalize)
     return dataset, namelist

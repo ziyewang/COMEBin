@@ -191,7 +191,7 @@ class SimCLR(object):
             outfile = self.args.output_path + '/embeddings.tsv'
             embeddings_df.to_csv(outfile, sep='\t', header=True)
 
-    def train_addpretrain(self, train_loader, data, namelist, kmer='4mer'):
+    def train_addpretrain(self, train_loader, data, namelist):
 
         scaler = GradScaler(enabled=self.args.fp16_precision)
 
@@ -202,12 +202,8 @@ class SimCLR(object):
         logging.info(f"Start SimCLR training for {self.args.epochs} epochs.")
         # logging.info(f"Training with cpu: {self.args.disable_cuda}.")
         if self.args.kmer_model_path == 'empty':
-            if kmer == '4mer':
-                kmer_len = 136
-            elif kmer == '345mer':
-                kmer_len = 680
-            else:
-                logging.info("Something wrong about args.kmer.")
+            kmer_len = 136
+
         else:
             kmer_len = 128
         logging.info('kmer_len:\t' + str(kmer_len) + '\n')

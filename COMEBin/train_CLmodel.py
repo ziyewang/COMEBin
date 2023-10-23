@@ -31,7 +31,7 @@ def train_CLmodel(logger, args):
         logger.info("The embeddings file has been generated before, please check the output commands.")
         sys.exit()
 
-    dataset, namelist = get_ContrastiveLearningDataset(args.data, args.kmer, args.n_views,
+    dataset, namelist = get_ContrastiveLearningDataset(args.data, args.n_views,
                                                        args.kmer_model_path, args.device, args.nokmer, args.cov_meannormalize,
                                                        args.cov_minmaxnormalize, args.cov_standardization,args.addvars,args.vars_sqrt, args.kmer_l2_normalize, args.kmerMetric_notl2normalize)
 
@@ -50,11 +50,6 @@ def train_CLmodel(logger, args):
         # train_dataset = torch.utils.data.TensorDataset(*dataset)
         train_dataset = torch.utils.data.TensorDataset(*[dataset[i][np.array(length_weight) >= args.contig_len]
                                                          for i in range(args.n_views)])
-
-    # if args.n_views == 2:
-    #     #
-    #     train_dataset = torch.utils.data.TensorDataset(dataset[0][np.array(length_weight) >= args.contig_len],
-    #                                                    dataset[1][np.array(length_weight) >= args.contig_len])
 
     train_loader = torch.utils.data.DataLoader(
         train_dataset, batch_size=args.batch_size, shuffle=True,
@@ -98,10 +93,7 @@ def train_CLmodel(logger, args):
             ps = [cnf['dropout_value']]*(len(cnf['emb_szs'])-1)
             actn= nn.LeakyReLU()
 
-            if args.kmer == '4mer':
-                insize = 136
-            else:
-                insize = 680
+            insize = 136
 
             kmerMetric_model = EmbeddingNet(
                 in_sz=insize,
@@ -177,18 +169,14 @@ def train_CLmodel(logger, args):
                                                                    last_epoch=-1)
 
             simclr = SimCLR(model=model, optimizer=optimizer, scheduler=scheduler, args=args)
-            simclr.train_addpretrain(train_loader, dataset, namelist, args.kmer)
+            simclr.train_addpretrain(train_loader, dataset, namelist)
 
 
 
         else:
             if args.kmer_model_path == 'empty':
-                if args.kmer == '4mer':
-                    cov_dim = len(dataset[0][0]) - 136
-                    input_size = args.out_dim_forcov + 136
-                else:
-                    cov_dim = len(dataset[0][0]) - 680
-                    input_size = args.out_dim_forcov + 680
+                cov_dim = len(dataset[0][0]) - 136
+                input_size = args.out_dim_forcov + 136
             else:
                 cov_dim = len(dataset[0][0]) - 128
                 input_size = args.out_dim_forcov + 128
@@ -241,6 +229,6 @@ def train_CLmodel(logger, args):
                                                                    last_epoch=-1)
 
             simclr = SimCLR(model=model, optimizer=optimizer, scheduler=scheduler, args=args)
-            simclr.train_addpretrain(train_loader, dataset, namelist, args.kmer)
+            simclr.train_addpretrain(train_loader, dataset, namelist)
 
     logger.info("Finish training.")
