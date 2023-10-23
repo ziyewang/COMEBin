@@ -232,5 +232,5 @@ def run_get_final_result(logger, args, seed_num, num_threads=40,res_name=None,ig
     best_method = estimate_bins_quality_nobins(bac_mg_table, ar_mg_table, args.output_path + '/cluster_res/',ignore_kmeans_res=ignore_kmeans_res)
 
     logger.info('Final result:\t'+args.output_path + '/cluster_res/'+best_method)
-    filter_small_bins(args.contig_file, args.output_path + '/cluster_res/'+best_method, args)
+    filter_small_bins(logger, args.contig_file, args.output_path + '/cluster_res/'+best_method, args)
 

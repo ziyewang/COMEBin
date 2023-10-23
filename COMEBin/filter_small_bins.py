@@ -1,11 +1,17 @@
-#!/usr/bin/env python
-import argparse
 import gzip
 import os
 import shutil
 
-def gen_bins(fastafile, resultfile, outputdir):
-    # read fasta file
+
+def gen_bins(fastafile: str, resultfile: str, outputdir: str) -> None:
+    """
+    Generate bins from contigs based on a result file and save them to the specified output directory.
+
+    :param fastafile: The path to the input FASTA file containing contigs.
+    :param resultfile: The path to the result file that associates contigs with clusters.
+    :param outputdir: The output directory where bins will be saved.
+    :return: None
+    """
     print("Processing file:\t{}".format(fastafile))
     sequences = {}
     if fastafile.endswith("gz"):
@@ -63,10 +69,19 @@ def gen_bins(fastafile, resultfile, outputdir):
                 bin_name += 1
 
 
-def filter_small_bins(fastafile, resultfile, args, minbinsize=200000):
-    outputdir = resultfile+'.filtersmallbins_'+str(minbinsize)+'.tsv'
+def filter_small_bins(logger, fastafile: str, resultfile: str, args, minbinsize: int = 200000) -> None:
+    """
+    Filter small bins from the result file.
 
-    print("Processing file:\t{}".format(fastafile))
+    :param fastafile: The path to the input FASTA file containing contigs.
+    :param resultfile: The path to the binning result file.
+    :param args: The additional arguments used in the process.
+    :param minbinsize: The minimum bin size (default: 200,000).
+    :return: None
+    """
+    outputdir = resultfile + '.filtersmallbins_' + str(minbinsize) + '.tsv'
+
+    logger.info("Processing file:\t{}".format(fastafile))
     sequences = {}
     with open(fastafile, 'r') as f:
         for line in f:
@@ -79,7 +94,7 @@ def filter_small_bins(fastafile, resultfile, args, minbinsize=200000):
                     sequences[seq] = ""
             else:
                 sequences[seq] += line.rstrip("\n")
-    print("Reading Map:\t{}".format(resultfile))
+    logger.info("Reading Map:\t{}".format(resultfile))
     dic = {}
     bin_size = {}
     with open(resultfile, "r") as f:
@@ -87,11 +102,11 @@ def filter_small_bins(fastafile, resultfile, args, minbinsize=200000):
             contig_name, cluster_name = line.strip().split('\t')
             try:
                 dic[cluster_name].append(contig_name)
-                bin_size[cluster_name] += len(sequences['>'+contig_name])
+                bin_size[cluster_name] += len(sequences['>' + contig_name])
             except:
                 dic[cluster_name] = []
                 dic[cluster_name].append(contig_name)
-                bin_size[cluster_name] = len(sequences['>'+contig_name])
+                bin_size[cluster_name] = len(sequences['>' + contig_name])
 
     with open(outputdir, "w") as f:
         for cluster_name in dic:
@@ -100,7 +115,5 @@ def filter_small_bins(fastafile, resultfile, args, minbinsize=200000):
                     f.write(contigIdx + "\t" + cluster_name + "\n")
     f.close()
 
-    gen_bins(fastafile, outputdir, args.output_path+'/comebin_res_bins')
-    shutil.copy2(outputdir,args.output_path+'/comebin_res.tsv')
-
-
+    gen_bins(fastafile, outputdir, args.output_path + '/comebin_res_bins')
+    shutil.copy2(outputdir, args.output_path + '/comebin_res.tsv')

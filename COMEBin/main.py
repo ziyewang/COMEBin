@@ -256,11 +256,6 @@ def arguments():
 def main():
     """
     The main function of the COMEBin program.
-    Args:
-        None (Uses command-line arguments for configuration)
-
-    Returns:
-        None
 
     Functionality:
         - Initializes logging for the program.
