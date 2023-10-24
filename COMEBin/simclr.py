@@ -19,6 +19,9 @@ class SimCLR(object):
     def __init__(self, *args, **kwargs):
         """
         Initialize the SimCLR model and related components.
+
+        :param args: Additional arguments.
+        :param kwargs: Keyword arguments including 'args', 'model', 'optimizer', 'scheduler'.
         """
         self.args = kwargs['args']
         self.model = kwargs['model'].to(self.args.device)
@@ -29,6 +32,12 @@ class SimCLR(object):
         self.criterion = torch.nn.CrossEntropyLoss().to(self.args.device)
 
     def info_nce_loss(self, features):
+        """
+        Calculate the InfoNCE loss for SimCLR.
+
+        :param features: Input features.
+        :return: Logits and labels for the loss.
+        """
         labels = torch.cat([torch.arange(self.args.batch_size) for i in range(self.args.n_views)], dim=0)
         labels = (labels.unsqueeze(0) == labels.unsqueeze(1)).float()
         labels = labels.to(self.args.device)
@@ -56,7 +65,12 @@ class SimCLR(object):
         return logits, labels
 
     def covmodel_info_nce_loss(self, features):
+        """
+        Calculate the InfoNCE loss for the coverage model.
 
+        :param features: Input features.
+        :return: Logits and labels for the loss.
+        """
         labels = torch.cat([torch.arange(self.args.batch_size) for i in range(self.args.n_views)], dim=0)
         labels = (labels.unsqueeze(0) == labels.unsqueeze(1)).float()
         labels = labels.to(self.args.device)
@@ -84,7 +98,12 @@ class SimCLR(object):
         return logits, labels
 
     def kmermodel_info_nce_loss(self, features):
+        """
+        Calculate the InfoNCE loss for the k-mer model.
 
+        :param features: Input features.
+        :return: Logits and labels for the loss.
+        """
         labels = torch.cat([torch.arange(self.args.batch_size) for i in range(self.args.n_views)], dim=0)
         labels = (labels.unsqueeze(0) == labels.unsqueeze(1)).float()
         labels = labels.to(self.args.device)
@@ -113,7 +132,13 @@ class SimCLR(object):
 
 
     def train(self, train_loader, data, namelist):
+        """
+        Train the SimCLR model.
 
+        :param train_loader: Data loader for training.
+        :param data: Input data.
+        :param namelist: List of sequence names.
+        """
         scaler = GradScaler(enabled=self.args.fp16_precision)
 
         # save config file
@@ -182,7 +207,13 @@ class SimCLR(object):
             embeddings_df.to_csv(outfile, sep='\t', header=True)
 
     def train_addpretrain(self, train_loader, data, namelist):
+        """
+        Train the SimCLR model with an additional pre-trained k-mer model.
 
+        :param train_loader: Data loader for training.
+        :param data: Input data.
+        :param namelist: List of sequence names.
+        """
         scaler = GradScaler(enabled=self.args.fp16_precision)
 
         # save config file
@@ -329,7 +360,11 @@ class SimCLR(object):
             embeddings_df.to_csv(outfile, sep='\t', header=True)
 
     def covmodeltrain(self, train_loader):
+        """
+        Train the coverage model.
 
+        :param train_loader: Data loader for training.
+        """
         scaler = GradScaler(enabled=self.args.fp16_precision)
 
         # save config file
