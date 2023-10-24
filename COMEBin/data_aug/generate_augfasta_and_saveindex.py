@@ -1,4 +1,3 @@
-#####import
 from Bio import SeqIO
 import mimetypes
 import os
@@ -6,7 +5,13 @@ import gzip
 import random
 import shutil
 
-def get_inputsequences(fastx_file):
+def get_inputsequences(fastx_file: str):
+    """
+    Retrieve sequences from a FASTX file and return them as a dictionary.
+
+    :param fastx_file: Path to the FASTX file (either FASTA or FASTQ).
+    :return: A dictionary where sequence IDs are keys and sequences are values.
+    """
     file_type = mimetypes.guess_type(fastx_file)[1]
     if file_type == 'gzip':
         f = gzip.open(fastx_file, "rt")
@@ -33,7 +38,17 @@ def get_inputsequences(fastx_file):
     return seqs
 
 
-def gen_augfasta(seqs, augprefix, out_file, p=None, contig_len=1000):
+def gen_augfasta(seqs: Dict[str, str], augprefix: str, out_file: str,
+                 p: float = None, contig_len: int = 1000):
+    """
+    Generate augmented sequences and save them to a FASTA file along with sequence information.
+
+    :param seqs: A dictionary of input sequences where keys are sequence IDs, and values are sequences.
+    :param augprefix: A prefix used in the augmented sequence IDs.
+    :param out_file: Path to the output FASTA file.
+    :param p: Proportion of the original sequence to include in the augmented sequences (default is None).
+    :param contig_len: Minimum length of the original sequence required for augmentation (default is 1000).
+    """
     seqkeys = []
     for seqid in seqs.keys():
         if len(seqs[seqid]) >= contig_len + 1:
@@ -75,9 +90,10 @@ def gen_augfasta(seqs, augprefix, out_file, p=None, contig_len=1000):
                     aug_seq_info[i][3]) + '\n')
 
 
-########
 def run_gen_augfasta(logger, args):
-    # generate augmentation fasta file and save index
+    """
+    Generate augmentation fasta file and save index
+    """
     num_aug = args.n_views - 1  # Generate several copies of augmented data
     fasta_file = args.contig_file
     out_path = args.out_augdata_path
