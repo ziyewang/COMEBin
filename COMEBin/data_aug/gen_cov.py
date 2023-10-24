@@ -39,18 +39,16 @@ def _checkback(msg):
     msg[1].info('Processed:{}'.format(msg[0]))
 
 
-def gen_bedtools_out(bam_file, bam_index, out, logger):
+def gen_bedtools_out(bam_file: str, bam_index: int, out: str, logger):
     """
-    Call bedtools and generate coverage file
+    Call bedtools and generate coverage file.
 
-    bam_file: bam files used
-    out: output
-    threshold: threshold of contigs that will be binned
-    is_combined: if using abundance feature in deep learning. True: use
-    contig_threshold: threshold of contigs for must-link constraints
-    sep: separator for multi-sample binning
+    :param bam_file: Path to the BAM file used (str).
+    :param bam_index: Index for identifying the BAM file (int).
+    :param out: Output directory (str).
+
+    :return: A tuple containing the path to the processed BAM file and the logger.
     """
-    import numpy as np
     logger.info('Processing `{}`'.format(bam_file))
     bam_name = os.path.split(bam_file)[-1] + '_{}'.format(bam_index)
     bam_depth = os.path.join(out, '{}_depth.txt'.format(bam_name))
@@ -66,7 +64,16 @@ def gen_bedtools_out(bam_file, bam_index, out, logger):
 
 
 
-def run_gen_bedtools_out(bam_file_path, out, logger, num_process=10):
+def run_gen_bedtools_out(bam_file_path: str, out: str, logger, num_process: int = 10):
+    """
+    Run the `gen_bedtools_out` function for multiple BAM files in parallel using multiprocessing.
+
+    :param bam_file_path: Directory containing BAM files (str).
+    :param out: Output directory for storing coverage files (str).
+    :param num_process: Number of processes to run in parallel (int, default: 10).
+
+    :return: None
+    """
     filenames = os.listdir(bam_file_path)
     namelist = []
     for filename in filenames:
@@ -77,7 +84,6 @@ def run_gen_bedtools_out(bam_file_path, out, logger, num_process=10):
 
     os.makedirs(out, exist_ok=True)
 
-    # num_process = 40
     pool = LoggingPool(num_process) if num_process != 0 else LoggingPool()
 
     for i in range(len(namelist)):
@@ -93,12 +99,19 @@ def run_gen_bedtools_out(bam_file_path, out, logger, num_process=10):
 
 
 # modifed from https://github.com/BigDataBiology/SemiBin/blob/3bad22c58e710d8a5455f7411bc8d4202d557c61/SemiBin/generate_coverage.py#L5
-def calculate_coverage_samplebyindex(depth_file, augpredix, aug_seq_info_dict, logger, edge=0,
-                                     contig_threshold=1000):
+def calculate_coverage_samplebyindex(depth_file: str, augpredix: str, aug_seq_info_dict: dict, logger, edge: int = 0,
+                                     contig_threshold: int = 1000):
     """
-    Input is position depth file generated from mosdepth or bedtools genomecov
-    """
+    Calculate coverage from a position depth file for a set of contigs by index.
 
+    :param depth_file: Input position depth file generated from bedtools genomecov (str).
+    :param augpredix: Prefix used for generating output files (str).
+    :param aug_seq_info_dict: Dictionary containing information on contigs (dict).
+    :param edge: Number of bases to exclude from the edges of contigs (int, default: 0).
+    :param contig_threshold: Threshold for contig length, below which contigs are skipped (int, default: 1000).
+
+    :return: A tuple containing the input depth_file and logger (Tuple[str, logging.Logger).
+    """
     contigs = []
     mean_coverage = []
 
@@ -133,10 +146,19 @@ def calculate_coverage_samplebyindex(depth_file, augpredix, aug_seq_info_dict, l
     return (depth_file, logger)
 
 
-def calculate_coverage(depth_file, logger, edge=0,
-                       contig_threshold=1000, sep=None, contig_threshold_dict=None):
+def calculate_coverage(depth_file: str, logger, edge: int = 0,
+                       contig_threshold: int = 1000, sep: str = None,
+                       contig_threshold_dict: dict = None):
     """
-    Input is position depth file generated from mosdepth or bedtools genomecov
+    Calculate coverage based on a position depth file generated from mosdepth or bedtools genomecov.
+
+    :param depth_file: Path to the position depth file (str).
+    :param edge: Unused parameter, kept for compatibility (int, default: 0).
+    :param contig_threshold: Threshold of contigs for must-link constraints (int, default: 1000).
+    :param sep: Separator for multi-sample binning (str, default: None).
+    :param contig_threshold_dict: Dictionary of contig thresholds by sample (dict, default: None).
+
+    :return: None
     """
     contigs = []
     mean_coverage = []
@@ -174,7 +196,20 @@ def calculate_coverage(depth_file, logger, edge=0,
     return (depth_file, logger)
 
 
-def gen_cov_from_bedout(logger, out_path, depth_file_path, num_process=10, num_aug=5,edge=0, contig_len=1000):
+def gen_cov_from_bedout(logger, out_path: str, depth_file_path: str,
+                        num_process: int = 10, num_aug: int = 5, edge: int = 0, contig_len: int = 1000):
+    """
+    Generate coverage data from bedtools output for original and augmented sequences.
+
+    :param out_path: Output directory for storing coverage files (str).
+    :param depth_file_path: Directory containing depth files (str).
+    :param num_process: Number of processes to run in parallel (int, default: 10).
+    :param num_aug: Number of augmented datasets (int, default: 5).
+    :param edge: Number of bases at contig edges to exclude (int, default: 0).
+    :param contig_len: Minimum contig length for inclusion (int, default: 1000).
+
+    :return: None
+    """
     ########
     filenames = os.listdir(depth_file_path)
     namelist = []

@@ -144,11 +144,6 @@ else
     --output_path ${output_dir}/comebin_res --earlystop --addvars --vars_sqrt
 fi
 
-#python main.py train --data ${output_dir}/data_augmentation \
-#--temperature ${temperature} --emb_szs_forcov ${emb_szs_forcov} \
-#--batch_size ${batch_size} --emb_szs ${emb_szs} --n_views ${n_views} \
-#--add_model_for_coverage \
-#--output_path ${output_dir}/comebin_res --earlystop --addvars --vars_sqrt
 
 if [[ $? -ne 0 ]] ; then echo "Something went wrong with running training network. Exiting.";exit 1; fi
 

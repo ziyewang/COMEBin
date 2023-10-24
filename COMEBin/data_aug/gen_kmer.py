@@ -30,7 +30,15 @@ def generate_feature_mapping(kmer_len):
             counter += 1
     return kmer_hash,counter
 
-def generate_features_from_fasta(fasta_file,length_threshold,kmer_len,outfile):
+def generate_features_from_fasta(fasta_file: str, length_threshold: int, kmer_len: int, outfile: str):
+    """
+    Generate composition features from a FASTA file.
+
+    :param fasta_file: The path to the input FASTA file.
+    :param length_threshold: The minimum length of sequences to include in the feature generation.
+    :param kmer_len: The length of k-mers to consider.
+    :param outfile: The path to the output CSV file where features will be saved.
+    """
     kmer_dict,nr_features = generate_feature_mapping(kmer_len)
 
     # Store composition vectors in a dictionary before creating dataframe
