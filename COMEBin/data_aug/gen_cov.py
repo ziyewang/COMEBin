@@ -10,7 +10,6 @@ import pandas as pd
 import numpy as np
 from itertools import groupby
 
-
 ### Return error message when using multiprocessing
 def error(msg, *args):
     return multiprocessing.get_logger().error(msg, *args)

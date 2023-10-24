@@ -14,6 +14,7 @@ from sklearn.cluster._kmeans import euclidean_distances, stable_cumsum, KMeans, 
 
 from utils import get_length, calculateN50, save_result
 from scripts.gen_bins_from_tsv import gen_bins as gen_bins_from_tsv
+from typing import List, Optional, Union
 
 
 logger = logging.getLogger('COMEBin')

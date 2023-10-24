@@ -5,6 +5,7 @@ import gzip
 import random
 import shutil
 
+
 def get_inputsequences(fastx_file: str):
     """
     Retrieve sequences from a FASTX file and return them as a dictionary.

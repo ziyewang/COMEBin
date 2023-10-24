@@ -4,7 +4,6 @@ import torch
 from utils import get_kmerMetric_emb
 from sklearn.preprocessing import normalize
 
-
 def get_kmer_coverage(data_path: str, n_views: int = 2, kmer_model_path: str = 'empty',
                       device = torch.device('cpu'), nokmer: bool = False, cov_meannormalize: bool = False,
                       cov_minmaxnormalize: bool = False, cov_standardization: bool = False, addvars: bool = False,

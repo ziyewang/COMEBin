@@ -9,6 +9,8 @@ from scripts.unitem_common import read_bins
 from scripts.unitem_markers import Markers
 from filter_small_bins import filter_small_bins
 
+from typing import List, Optional, Union
+
 # for each bin
 # update for checkm marker
 def get_binstats(bin_contig_names, markers):

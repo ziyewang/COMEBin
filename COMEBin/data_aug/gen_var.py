@@ -4,12 +4,11 @@ import traceback
 from multiprocessing.pool import Pool
 
 import os
-import subprocess
 from atomicwrites import atomic_write
 import pandas as pd
 import numpy as np
 from itertools import groupby
-
+from typing import List, Optional, Union
 
 ### Return error message when using multiprocessing
 def error(msg, *args):
