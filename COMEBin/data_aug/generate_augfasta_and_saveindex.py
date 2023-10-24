@@ -4,6 +4,7 @@ import os
 import gzip
 import random
 import shutil
+from typing import Dict
 
 
 def get_inputsequences(fastx_file: str):
