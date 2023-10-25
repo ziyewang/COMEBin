@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # -*- coding:utf8 -*-
-import sys,os,re
+import os,re
 import click
 from Bio import SeqIO
 
@@ -27,6 +27,5 @@ def main(input_file, k):
     print('finished')
 
 if __name__ == "__main__":
-    #os.chdir("")
     main()
     

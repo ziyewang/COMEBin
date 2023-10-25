@@ -9,7 +9,7 @@ from scripts.unitem_common import read_bins
 from scripts.unitem_markers import Markers
 from filter_small_bins import filter_small_bins
 
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Dict
 
 # for each bin
 # update for checkm marker
@@ -212,7 +212,7 @@ def run_get_final_result(logger, args, seed_num: int, num_threads: int = 40,
         logger.info("Run unitem profile:\t" + str(seed_num))
         bin_dirs = {}
         if res_name==None:
-            res_name = 'weight_seed_kmeans_k_' + str(seed_num + 1) + '_result.tsv'
+            res_name = 'weight_seed_kmeans_k_' + str(seed_num) + '_result.tsv'
         bin_dirs[res_name] = (args.output_path + '/cluster_res/' + res_name + '_bins', 'fa')
 
         output_dir = args.output_path + '/cluster_res/unitem_profile'

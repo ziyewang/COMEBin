@@ -236,7 +236,7 @@ def run_leiden(output_file: str, namelist: List[str],
                is_membership_fixed: Optional[bool] = None, resolution_parameter: float = 1.0,
                partgraph_ratio: int = 50):
     """
-    Run Leiden community detection algorithm and save the results to an output file.
+    Run Leiden community detection algorithm and save the results.
 
     :param output_file: The path to the output file.
     :param namelist: A list of contig names.

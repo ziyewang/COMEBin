@@ -20,7 +20,6 @@ class SimCLR(object):
         """
         Initialize the SimCLR model and related components.
 
-        :param args: Additional arguments.
         :param kwargs: Keyword arguments including 'args', 'model', 'optimizer', 'scheduler'.
         """
         self.args = kwargs['args']
