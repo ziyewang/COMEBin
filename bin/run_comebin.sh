@@ -24,6 +24,13 @@ help_message () {
 	echo "  -b INT          batch size for training process (default=1024)"
 	echo "";}
 
+run_file_path=$(dirname $(which run_comebin.sh))
+
+if [[ $? -ne 0 ]]; then
+	echo "cannot find run_comebin.sh file - something went wrong with the installation!"
+	exit 1
+fi
+
 
 ########################################################################################################
 ########################     LOADING IN THE PARAMETERS AND RUNNING              ########################
@@ -38,11 +45,11 @@ batch_size=1024
 
 while getopts a:o:p:n:t:l:e:c:b: OPT; do
  case ${OPT} in
-  a) contig_file=${OPTARG}
+  a) contig_file=$(realpath ${OPTARG})
     ;;
-  o) output_dir=${OPTARG}
+  o) output_dir=$(realpath ${OPTARG})
     ;;
-  p) bam_file_path=${OPTARG}
+  p) bam_file_path=$(realpath ${OPTARG})
     ;;
   n) n_views=${OPTARG}
     ;;
@@ -62,6 +69,8 @@ while getopts a:o:p:n:t:l:e:c:b: OPT; do
     exit 1
  esac
 done
+
+cd ${run_file_path}/COMEBin
 
 # check parameter
 if [ -z "${contig_file}" -o -z "${output_dir}" -o -z "${bam_file_path}" ]; then
