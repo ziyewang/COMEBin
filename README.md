@@ -28,14 +28,13 @@ COMEBin v1.0.0 is supported and tested in Linux systems.
 ## <a name="install"></a>Install COMEBin via bioconda
 
 ```sh
-conda create -n COMEBin
-conda activate COMEBin
+conda create -n COMEBin_env
+conda activate COMEBin_env
 conda install -c conda-forge -c bioconda comebin
 ```
 
 ## <a name="started"></a>Install COMEBin via source code
-
-Obtain codes and create an environment:
+You can also install COMEBin from the source code. 
 After installing Anaconda (or miniconda), first, obtain COMEBin:
 
 ```sh
@@ -121,8 +120,15 @@ python Filter_tooshort.py final.contigs.fa 1000
 
 
 ## <a name="runcomebin"></a>How to run COMEBin
+### Run COMEBin via bioconda
+```sh
+run_comebin.sh -a ${contig_file} \
+-o ${output_path} \
+-p ${path_to_bamfiles} \
+-t 40
+```
 
-### Run COMEBin
+### Run COMEBin via source code
 ```sh
 cd path_to_COMEBin/COMEBin
 
@@ -130,7 +136,7 @@ bash run_comebin.sh -a ${contig_file} \
 -o ${output_path} \
 -p ${path_to_bamfiles} \
 -t 40
-
+```
 Usage: bash run_comebin.sh [options] -a contig_file -o output_dir -p bam_file_path
 Options:
 
