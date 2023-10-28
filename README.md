@@ -90,7 +90,7 @@ Final result in tsv format: path_to_comebin_test_data/run_comebin_test/comebin_r
 
 The preprocessing steps aim to generate bam files as input to our program.
 
-Several binning methods can generate bam files by aligning reads to contigs (such as MetaWRAP and MetaBAT), and we provide one way to generate the input files as follows.
+Several binning methods can generate bam files by aligning reads to contigs (such as MetaWRAP), and we provide one way to generate the input files as follows.
 ### Generate bam files
 To generate bam files from sequencing reads directly, run the script slightly modified from the "binning.sh" of MetaWRAP. The script supports different types of sequencing reads, and the default type is "paired" ([readsX_1.fastq readsX_2.fastq ...]).
 
