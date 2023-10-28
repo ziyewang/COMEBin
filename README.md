@@ -162,8 +162,6 @@ Options:
 
 [4] Pan, S., Zhu, C., Zhao, XM., and Coelho, LP. A deep siamese neural network improves metagenome-assembled genomes in microbiome datasets across different environments. Nature Communications 13, 2326 (2022). https://doi.org/10.1038/s41467-022-29843-y
 
-[5] Uritskiy, Gherman V., Jocelyne DiRuggiero, and James Taylor. "MetaWRAP—a flexible pipeline for genome-resolved metagenomic data analysis." Microbiome 6.1 (2018): 1-13.
-
 ## <a name="contact"></a>Contacts and bug reports
 Please feel free to send bug reports or questions to
 Ziye Wang: zwang17@fudan.edu.cn and Prof. Shanfeng Zhu: zhusf@fudan.edu.cn
