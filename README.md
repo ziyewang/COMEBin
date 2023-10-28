@@ -27,14 +27,17 @@ COMEBin requires only a standard computer with enough RAM to support the in-memo
 COMEBin v1.0.0 is supported and tested in Linux systems.
 
 ## <a name="install"></a>Install COMEBin via bioconda
-
+To run COMEBin with CPU only:
 ```sh
 conda create -n COMEBin_env
 conda activate COMEBin_env
 conda install -c conda-forge -c bioconda comebin
 ```
-To run COMEBin with GPU (which provides faster performance when a GPU is available), you should install PyTorch with GPU support:
+To run COMEBin with GPU (which provides faster performance when a GPU is available), you should also install PyTorch with GPU support:
 ```sh
+conda create -n COMEBin_env
+conda activate COMEBin_env
+conda install -c conda-forge -c bioconda comebin
 conda install pytorch pytorch-cuda=11.8 -c pytorch -c nvidia -c conda-forge
 ```
 
