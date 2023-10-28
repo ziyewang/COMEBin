@@ -66,15 +66,15 @@ cd path_to_COMEBin/COMEBin
 
 CUDA_VISIBLE_DEVICES=0 bash run_comebin.sh -a path_to_comebin_test_data/BATS_SAMN07137077_METAG.scaffolds.min500.fasta.f1k.fasta \
 -p path_to_comebin_test_data/bamfiles \
--o path_to_comebin_test_data/expected_output/run_comebin_test \
+-o path_to_comebin_test_data/run_comebin_test \
 -n 6 \
 -t 40
 ```
-Excepted output is given in: path_to_comebin_test_data/expected_output/run_comebin_test
+Excepted output is given in: path_to_comebin_test_data/run_comebin_test
 
 ```sh
-Final result (bins): path_to_comebin_test_data/expected_output/run_comebin_test/comebin_res/comebin_res_bins
-Final result in tsv format: path_to_comebin_test_data/expected_output/run_comebin_test/comebin_res/comebin_res.tsv
+Final result (bins): path_to_comebin_test_data/run_comebin_test/comebin_res/comebin_res_bins
+Final result in tsv format: path_to_comebin_test_data/run_comebin_test/comebin_res/comebin_res.tsv
 ```
 
 
@@ -84,7 +84,7 @@ The preprocessing steps aim to generate bam files as input to our program.
 
 Several binning methods can generate bam files by aligning reads to contigs (such as MetaWRAP and MetaBAT), and we provide one way to generate the input files as follows.
 ### Generate bam files
-To generate bam files from sequencing reads directly, run the following script slightly modified from the "binning.sh" of MetaWRAP. The script supports different types of sequencing reads, and the default type is "paired" ([readsX_1.fastq readsX_2.fastq ...]).
+To generate bam files from sequencing reads directly, run the script slightly modified from the "binning.sh" of MetaWRAP. The script supports different types of sequencing reads, and the default type is "paired" ([readsX_1.fastq readsX_2.fastq ...]).
 
 ```sh
 cd path_to_COMEBin
