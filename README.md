@@ -78,7 +78,7 @@ CUDA_VISIBLE_DEVICES=0 bash run_comebin.sh -a path_to_comebin_test_data/BATS_SAM
 -n 6 \
 -t 40
 ```
-Excepted output is given in: path_to_comebin_test_data/run_comebin_test
+Excepted output is given in path_to_comebin_test_data/run_comebin_test
 
 ```sh
 Final result (bins): path_to_comebin_test_data/run_comebin_test/comebin_res/comebin_res_bins
