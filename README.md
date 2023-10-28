@@ -138,6 +138,7 @@ bash run_comebin.sh -a ${contig_file} \
 -p ${path_to_bamfiles} \
 -t 40
 ```
+```sh
 Usage: bash run_comebin.sh [options] -a contig_file -o output_dir -p bam_file_path
 Options:
 
