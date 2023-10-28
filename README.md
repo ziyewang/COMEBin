@@ -33,6 +33,10 @@ conda create -n COMEBin_env
 conda activate COMEBin_env
 conda install -c conda-forge -c bioconda comebin
 ```
+To run COMEBin with GPU (which provides faster performance when a GPU is available), you should install PyTorch with GPU support:
+```sh
+conda install pytorch pytorch-cuda=11.8 -c pytorch -c nvidia -c conda-forge
+```
 
 ## <a name="started"></a>Install COMEBin via source code
 You can also install COMEBin from the source code. 
