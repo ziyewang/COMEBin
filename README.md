@@ -161,13 +161,13 @@ Options:
 ```
 
 ## <a name="References"></a>References
-[1] Meyer, F., Fritz, A., Deng, ZL. et al. Critical Assessment of Metagenome Interpretation: the second round of challenges. Nature Methods (2022). https://doi.org/10.1038/s41592-022-01431-4
+[1] Meyer F, Fritz A, Deng Z L, et al. Critical assessment of metagenome interpretation: the second round of challenges[J]. Nature methods, 2022, 19(4): 429-440.
 
-[2] Parks, Donovan H., et al. "CheckM: assessing the quality of microbial genomes recovered from isolates, single cells, and metagenomes." Genome Research 25.7 (2015): 1043-1055.
+[2] Parks D H, Imelfort M, Skennerton C T, et al. CheckM: assessing the quality of microbial genomes recovered from isolates, single cells, and metagenomes[J]. Genome research, 2015, 25(7): 1043-1055.
 
 [3] https://github.com/dparks1134/UniteM.
 
-[4] Pan, S., Zhu, C., Zhao, XM., and Coelho, LP. A deep siamese neural network improves metagenome-assembled genomes in microbiome datasets across different environments. Nature Communications 13, 2326 (2022). https://doi.org/10.1038/s41467-022-29843-y
+[4] Pan S, Zhu C, Zhao X M, et al. A deep siamese neural network improves metagenome-assembled genomes in microbiome datasets across different environments[J]. Nature communications, 2022, 13(1): 2326.
 
 ## <a name="contact"></a>Contacts and bug reports
 Please feel free to send bug reports or questions to
