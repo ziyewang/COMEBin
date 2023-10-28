@@ -2,6 +2,7 @@
 GitHub repository for the manuscript "COMEBin allows effective binning of metagenomic contigs using COntrastive Multi-viEw representation learning".
 - [Overview](#overview)
 - [System Requirements](#requirements)
+- [Install COMEBin via bioconda](#install)
 - [Install COMEBin via source code](#started)
 - [A test dataset to demo COMEBin](#demo)
 - [Preprocessing](#preprocessing)
@@ -24,6 +25,13 @@ COMEBin requires only a standard computer with enough RAM to support the in-memo
 ### OS Requirements
 COMEBin v1.0.0 is supported and tested in Linux systems.
 
+## <a name="install"></a>Install COMEBin via bioconda
+
+```sh
+conda create -n COMEBin
+conda activate COMEBin
+conda install -c conda-forge -c bioconda comebin
+```
 
 ## <a name="started"></a>Install COMEBin via source code
 
@@ -33,7 +41,7 @@ After installing Anaconda (or miniconda), first, obtain COMEBin:
 ```sh
 git clone https://github.com/ziyewang/COMEBin.git
 ```
-Then create an environment to run COMEBin.
+Then, create an environment to run COMEBin.
 
 ```sh
 cd path_to_COMEBin
