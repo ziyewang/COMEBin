@@ -29,14 +29,14 @@ COMEBin v1.0.0 is supported and tested in Linux systems.
 ## <a name="install"></a>Install COMEBin via bioconda
 To run COMEBin with CPU only:
 ```sh
-conda create -n COMEBin_env
-conda activate COMEBin_env
+conda create -n comebin_env
+conda activate comebin_env
 conda install -c conda-forge -c bioconda comebin
 ```
 To run COMEBin with GPU (which provides faster performance when a GPU is available), you should also install PyTorch with GPU support:
 ```sh
-conda create -n COMEBin_env
-conda activate COMEBin_env
+conda create -n comebin_env
+conda activate comebin_env
 conda install -c conda-forge -c bioconda comebin
 conda install pytorch pytorch-cuda=11.8 -c pytorch -c nvidia -c conda-forge
 ```
@@ -130,6 +130,8 @@ python Filter_tooshort.py final.contigs.fa 1000
 ## <a name="runcomebin"></a>How to run COMEBin
 ### Run COMEBin via bioconda
 ```sh
+conda activate comebin_env
+
 run_comebin.sh -a ${contig_file} \
 -o ${output_path} \
 -p ${path_to_bamfiles} \
@@ -138,6 +140,8 @@ run_comebin.sh -a ${contig_file} \
 
 ### Run COMEBin via source code
 ```sh
+conda activate comebin_env
+
 cd path_to_COMEBin/COMEBin
 
 bash run_comebin.sh -a ${contig_file} \
