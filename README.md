@@ -7,6 +7,7 @@ GitHub repository for the manuscript "COMEBin allows effective binning of metage
 - [A test dataset to demo COMEBin](#demo)
 - [Preprocessing](#preprocessing)
 - [How to run COMEBin](#runcomebin)
+- [References](#References)
 - [Contacts and bug reports](#contact)
   
 ## <a name="overview"></a>Overview
@@ -203,7 +204,16 @@ python main.py get_result --contig_file ${contig_file} \
 --output_path ${output_path} \
 --seed_file ${seed_file} --num_threads 40
 ```
+## <a name="References"></a>References
+[1] Meyer, F., Fritz, A., Deng, ZL. et al. Critical Assessment of Metagenome Interpretation: the second round of challenges. Nature Methods (2022). https://doi.org/10.1038/s41592-022-01431-4
 
+[2] Parks, Donovan H., et al. "CheckM: assessing the quality of microbial genomes recovered from isolates, single cells, and metagenomes." Genome Research 25.7 (2015): 1043-1055.
+
+[3] https://github.com/dparks1134/UniteM.
+
+[4] Pan, S., Zhu, C., Zhao, XM., and Coelho, LP. A deep siamese neural network improves metagenome-assembled genomes in microbiome datasets across different environments. Nature Communications 13, 2326 (2022). https://doi.org/10.1038/s41467-022-29843-y
+
+[5] Uritskiy, Gherman V., Jocelyne DiRuggiero, and James Taylor. "MetaWRAP—a flexible pipeline for genome-resolved metagenomic data analysis." Microbiome 6.1 (2018): 1-13.
 
 ## <a name="contact"></a>Contacts and bug reports
 Please feel free to send bug reports or questions to
