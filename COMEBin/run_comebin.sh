@@ -92,7 +92,8 @@ else
 fi
 
 
-
+current_path=$(pwd)
+chmod +x ${current_path}/../auxiliary/test_getmarker_2quarter.pl
 
 ########################################################################################################
 ###### Get augmentation data
