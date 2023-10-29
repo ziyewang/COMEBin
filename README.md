@@ -27,6 +27,8 @@ COMEBin requires only a standard computer with enough RAM to support the in-memo
 COMEBin v1.0.0 is supported and tested in Linux systems.
 
 ## <a name="install"></a>Install COMEBin via bioconda
+COMEBin can be installed as a Bioconda's package.
+
 To run COMEBin with CPU only:
 ```sh
 conda create -n comebin_env
@@ -63,10 +65,11 @@ chmod +x test_getmarker_2quarter.pl
 ```
 
 ## <a name="demo"></a>A test dataset to demo COMEBin
-We provide a small dataset to demo and test the software. Test data is available at https://drive.google.com/file/d/1xWpN2z8JTaAzWW4TcOl0Lr4Y_x--Fs5s/view?usp=sharing
+We provide a small dataset to demo and test the software. Test data is available at https://drive.google.com/file/d/1xWpN2z8JTaAzWW4TcOl0Lr4Y_x--Fs5s/view?usp=sharing.
+The inputs for COMEBin include contigs and BAM files (reads mapping to the contigs).
 ```sh
-comebin_test_data/BATS_SAMN07137077_METAG.scaffolds.min500.fasta.f1k.fasta
-comebin_test_data/bamfiles/SRR5720343.bam
+Contig file: comebin_test_data/BATS_SAMN07137077_METAG.scaffolds.min500.fasta.f1k.fasta
+BAM files: comebin_test_data/bamfiles/SRR5720343.bam
 ```
 Run COMEBin on the test dataset:
 ```sh
