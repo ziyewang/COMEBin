@@ -1,5 +1,5 @@
 # COMEBin
-GitHub repository for the manuscript "COMEBin allows effective binning of metagenomic contigs using COntrastive Multi-viEw representation learning".
+GitHub repository for the manuscript "Effective binning of metagenomic contigs using COntrastive Multi-viEw representation learning".
 - [Overview](#overview)
 - [System Requirements](#requirements)
 - [Install COMEBin via bioconda](#install)
@@ -174,4 +174,6 @@ Options:
 Please feel free to send bug reports or questions to
 Ziye Wang: zwang17@fudan.edu.cn and Prof. Shanfeng Zhu: zhusf@fudan.edu.cn
 
+## <a name="Citation"></a>Citation
 
+Wang, Z., You, R., Han, H. et al. Effective binning of metagenomic contigs using contrastive multi-view representation learning. Nat Commun 15, 585 (2024). https://doi.org/10.1038/s41467-023-44290-z
