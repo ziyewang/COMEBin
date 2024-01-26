@@ -5,7 +5,7 @@
 # Author of pipeline: Ziye Wang.
 # For questions, bugs, and suggestions, contact me at zwang17@fudan.edu.cn
 ##############################################################################################################################################################
-VERSION="1.0.3"
+VERSION="1.0.4"
 
 help_message () {
   echo ""
