@@ -23,6 +23,7 @@ class SimCLR(object):
         :param kwargs: Keyword arguments including 'args', 'model', 'optimizer', 'scheduler'.
         """
         self.args = kwargs['args']
+        torch.set_num_threads(self.args.num_threads)
         self.model = kwargs['model'].to(self.args.device)
         self.optimizer = kwargs['optimizer']
         self.scheduler = kwargs['scheduler']

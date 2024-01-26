@@ -5,7 +5,7 @@
 # Author of pipeline: Ziye Wang.
 # For questions, bugs, and suggestions, contact me at zwang17@fudan.edu.cn
 ##############################################################################################################################################################
-VERSION="1.0.2"
+VERSION="1.0.3"
 
 help_message () {
   echo ""
@@ -38,11 +38,11 @@ batch_size=1024
 
 while getopts a:o:p:n:t:l:e:c:b: OPT; do
  case ${OPT} in
-  a) contig_file=${OPTARG}
+  a) contig_file=$(realpath ${OPTARG})
     ;;
-  o) output_dir=${OPTARG}
+  o) output_dir=$(realpath ${OPTARG})
     ;;
-  p) bam_file_path=${OPTARG}
+  p) bam_file_path=$(realpath ${OPTARG})
     ;;
   n) n_views=${OPTARG}
     ;;
@@ -68,6 +68,16 @@ if [ -z "${contig_file}" -o -z "${output_dir}" -o -z "${bam_file_path}" ]; then
   help_message
   exit 1
 fi
+
+
+sequence_count=$(grep -c "^>" "${contig_file}")
+
+
+if (( sequence_count < ${batch_size} )); then
+    batch_size=${sequence_count}
+fi
+
+echo "Batch size: ${batch_size}"
 
 
 if [ -z "$temperature" ]; then
@@ -139,7 +149,7 @@ if [ -d "$folder" ]; then
         --temperature ${temperature} --emb_szs_forcov ${emb_szs_forcov} \
         --batch_size ${batch_size} --emb_szs ${emb_szs} --n_views ${n_views} \
         --add_model_for_coverage \
-        --output_path ${output_dir}/comebin_res --earlystop --addvars --vars_sqrt
+        --output_path ${output_dir}/comebin_res --earlystop --addvars --vars_sqrt --num_threads ${num_threads}
     else
         echo "No need to run getting representation."
     fi
@@ -150,7 +160,7 @@ else
     --temperature ${temperature} --emb_szs_forcov ${emb_szs_forcov} \
     --batch_size ${batch_size} --emb_szs ${emb_szs} --n_views ${n_views} \
     --add_model_for_coverage \
-    --output_path ${output_dir}/comebin_res --earlystop --addvars --vars_sqrt
+    --output_path ${output_dir}/comebin_res --earlystop --addvars --vars_sqrt --num_threads ${num_threads}
 fi
 
 

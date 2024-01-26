@@ -150,7 +150,8 @@ def arguments():
                                        help='kmerMetric_notl2normalize (used for kmerMetric)')
     CLtraining_subparsers.add_argument('--covmodel_notl2normalize', action='store_true',
                                        help='covmodel_notl2normalize (used for covmodel)')
-
+    CLtraining_subparsers.add_argument('--num_threads', default=10, type=int,
+                                              help='num_threads for training in CPU mode.')
 
 
 

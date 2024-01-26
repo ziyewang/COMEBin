@@ -27,6 +27,7 @@ def train_CLmodel(logger, args):
         cudnn.benchmark = True
     else:
         args.device = torch.device('cpu')
+        torch.set_num_threads(args.num_threads)
 
     logger.info("Generate features for the data.")
 
