@@ -30,7 +30,7 @@ console_hdr.setFormatter(formatter)
 logger.addHandler(console_hdr)
 
 
-def fit_hnsw_index(logger, features, ef: int = 100, M: int = 16,
+def fit_hnsw_index(logger, features,num_threads, ef: int = 100, M: int = 16,
                    space: str = 'l2', save_index_file: bool = False) -> hnswlib.Index:
     """
     Fit an HNSW index with the given features using the HNSWlib library; Convenience function to create HNSW graph.
@@ -60,7 +60,7 @@ def fit_hnsw_index(logger, features, ef: int = 100, M: int = 16,
     p.init_index(max_elements=num_elements, ef_construction=ef, M=M)
 
     # Element insertion
-    int_labels = p.add_items(features, labels_index)
+    int_labels = p.add_items(features, labels_index, num_threads=num_threads)
 
     # Controlling the recall by setting ef
     # ef should always be > k
@@ -389,13 +389,13 @@ def cluster(logger, args, prefix=None):
     partgraph_ratio_list =[50,100,80]
     max_edges_list = [100]
     for max_edges in max_edges_list:
-        p = fit_hnsw_index(logger, norm_embeddings, ef=max_edges * 10)
+        p = fit_hnsw_index(logger, norm_embeddings, num_workers, ef=max_edges * 10)
         seed_bacar_marker_idx = gen_seed_idx(seed_file, contig_id_list=namelist)
         initial_list = list(np.arange(len(namelist)))
         is_membership_fixed = [i in seed_bacar_marker_idx for i in initial_list]
 
         time_start = time.time()
-        ann_neighbor_indices, ann_distances = p.knn_query(norm_embeddings, max_edges+1)
+        ann_neighbor_indices, ann_distances = p.knn_query(norm_embeddings, max_edges+1, num_threads=num_workers)
         #ann_distances is l2 distance's square
         time_end = time.time()
         logger.info('knn query time cost:\t' +str(time_end - time_start) + "s")
