@@ -10,12 +10,12 @@ VERSION="1.0.4"
 help_message () {
   echo ""
   echo "COMEBin version: $VERSION"
-  echo "Usage: bash run_comebin.sh [options] -a contig_file -o output_dir -p bam_file_path"
+  echo "Usage: bash run_comebin.sh [options] -a contig_file -o output_dir -p bam_file_or_path"
 	echo "Options:"
 	echo ""
-	echo "  -a STR          metagenomic assembly file"
+	echo "  -a STR          metagenomic assembly file (supports .gz compressed files)"
 	echo "  -o STR          output directory"
-	echo "  -p STR          path to access to the bam files"
+	echo "  -p STR          path to a BAM file or directory containing BAM files"
 	echo "  -n INT          number of views for contrastive multiple-view learning (default=6)"
 	echo "  -t INT          number of threads (default=5)"
 	echo "  -l FLOAT        temperature in loss function (default=0.07 for assemblies with an N50 > 10000, default=0.15 for others)"
@@ -42,7 +42,7 @@ while getopts a:o:p:n:t:l:e:c:b: OPT; do
     ;;
   o) output_dir=$(realpath ${OPTARG})
     ;;
-  p) bam_file_path=$(realpath ${OPTARG})
+  p) bam_path=$(realpath ${OPTARG})
     ;;
   n) n_views=${OPTARG}
     ;;
@@ -64,21 +64,50 @@ while getopts a:o:p:n:t:l:e:c:b: OPT; do
 done
 
 # check parameter
-if [ -z "${contig_file}" -o -z "${output_dir}" -o -z "${bam_file_path}" ]; then
+if [ -z "${contig_file}" -o -z "${output_dir}" -o -z "${bam_path}" ]; then
   help_message
   exit 1
 fi
 
+# Create temporary directory for any temp files
+temp_dir=$(mktemp -d -p /tmp comebin_XXXXXX)
+cleanup() {
+    echo "Cleaning up temporary files..."
+    [ -d "$temp_dir" ] && rm -rf "$temp_dir"
+    [ -n "$temp_contig_file" -a -f "$temp_contig_file" ] && rm -f "$temp_contig_file"
+    [ -n "$temp_bam_dir" -a -d "$temp_bam_dir" ] && rm -rf "$temp_bam_dir"
+}
+trap cleanup EXIT
+
+# Handle compressed assembly files
+if [[ "$contig_file" =~ \.(gz|gzip)$ ]]; then
+    echo "Detected compressed assembly file. Decompressing to temporary location..."
+    temp_contig_file="${temp_dir}/$(basename "${contig_file%.*}")"
+    gunzip -c "$contig_file" > "$temp_contig_file"
+    contig_file="$temp_contig_file"
+    echo "Using decompressed file: $contig_file"
+fi
+
+# Handle BAM file or directory
+if [ -f "$bam_path" ] && [[ "$bam_path" =~ \.bam$ ]]; then
+    echo "Using single BAM file: $bam_path"
+    temp_bam_dir="${temp_dir}/bam_files"
+    mkdir -p "$temp_bam_dir"
+    ln -sf "$bam_path" "$temp_bam_dir/$(basename "$bam_path")"
+    bam_file_path="$temp_bam_dir"
+    echo "Created temporary BAM directory: $bam_file_path"
+else
+    echo "Using BAM files from directory: $bam_path"
+    bam_file_path="$bam_path"
+fi
 
 sequence_count=$(grep -c "^>" "${contig_file}")
-
 
 if (( sequence_count < ${batch_size} )); then
     batch_size=${sequence_count}
 fi
 
 echo "Batch size: ${batch_size}"
-
 
 if [ -z "$temperature" ]; then
     # Compute the length of each sequence and sort using the awk command
@@ -182,4 +211,3 @@ python main.py get_result --contig_file ${contig_file} \
 --seed_file ${seed_file} --num_threads ${num_threads}
 
 if [[ $? -ne 0 ]] ; then echo "Something went wrong with running clustering. Exiting.";exit 1; fi
-
