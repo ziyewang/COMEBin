@@ -15,6 +15,7 @@ from sklearn.cluster._kmeans import euclidean_distances, stable_cumsum, KMeans, 
 from utils import get_length, calculateN50, save_result
 from scripts.gen_bins_from_tsv import gen_bins as gen_bins_from_tsv
 from typing import List, Optional, Union
+from joblib import Parallel, delayed
 
 
 logger = logging.getLogger('COMEBin')
@@ -309,6 +310,24 @@ def run_leiden(output_file: str, namelist: List[str],
         f.write(namelist[contigIdx] + "\t" + str(contig_labels_dict[namelist[contigIdx]]) + "\n")
     f.close()
 
+ann_neighbor_indices = None
+ann_distances = None
+norm_embeddings = None
+
+def set_shared_data(_ann_indices, _ann_distances, _norm_embeddings):
+    global ann_neighbor_indices, ann_distances, norm_embeddings
+    ann_neighbor_indices = _ann_indices
+    ann_distances = _ann_distances
+    norm_embeddings = _norm_embeddings
+
+def run_leiden_wrapper(output_file, namelist, ann_neighbor_indices, ann_distances,
+               length_weight, max_edges, norm_embeddings,
+               bandwidth, initial_list, is_membership_fixed,
+               para, partgraph_ratio):
+    run_leiden(output_file, namelist, ann_neighbor_indices, ann_distances,
+               length_weight, max_edges, norm_embeddings,
+               bandwidth, 'l2', initial_list, is_membership_fixed,
+               para, partgraph_ratio)
 
 def cluster(logger, args, prefix=None):
     """
@@ -378,8 +397,6 @@ def cluster(logger, args, prefix=None):
         logger.info(k)
         seed_kmeans_full(logger, contig_file, namelist, output_path, norm_embeddings, k, mode, length_weight, seed_file)
 
-    import multiprocessing
-
     num_workers = args.num_threads
 
 
@@ -400,21 +417,25 @@ def cluster(logger, args, prefix=None):
         time_end = time.time()
         logger.info('knn query time cost:\t' +str(time_end - time_start) + "s")
 
+        set_shared_data(ann_neighbor_indices, ann_distances, norm_embeddings)
 
-        with multiprocessing.Pool(num_workers) as multiprocess:
-            for partgraph_ratio in partgraph_ratio_list:
-                for bandwidth in bandwidth_list:
-                    for para in parameter_list:
-                        output_file = output_path + 'Leiden_bandwidth_' + str(
-                            bandwidth) + '_res_maxedges' + str(max_edges) + 'respara_'+str(para)+'_partgraph_ratio_'+str(partgraph_ratio)+'.tsv'
+        tasks = []
+        for partgraph_ratio in partgraph_ratio_list:
+            for bandwidth in bandwidth_list:
+                for para in parameter_list:
+                    output_file = (
+                        output_path + f'Leiden_bandwidth_{bandwidth}_res_maxedges{max_edges}'
+                        f'respara_{para}_partgraph_ratio_{partgraph_ratio}.tsv'
+                    )
+                    tasks.append((output_file, bandwidth, para, partgraph_ratio))
 
-                        if not (os.path.exists(output_file)):
-                            multiprocess.apply_async(run_leiden, (output_file, namelist, ann_neighbor_indices, ann_distances, length_weight, max_edges, norm_embeddings,
-                                                                        bandwidth, 'l2', initial_list,is_membership_fixed,
-                                                                        para, partgraph_ratio))
-
-            multiprocess.close()
-            multiprocess.join()
+        Parallel(n_jobs=num_workers, prefer="processes")(
+            delayed(run_leiden_wrapper)(output_file, namelist, ann_neighbor_indices, ann_distances, 
+                length_weight, max_edges, norm_embeddings,
+                bandwidth, initial_list,is_membership_fixed,
+                para, partgraph_ratio)
+            for output_file, bandwidth, para, partgraph_ratio in tasks
+        )
         logger.info('multiprocess Done')
 
 
