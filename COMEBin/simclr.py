@@ -4,7 +4,7 @@ import os
 
 import torch
 import torch.nn.functional as F
-from torch.cuda.amp import GradScaler, autocast
+from torch.amp import GradScaler, autocast
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 from utils import save_config_file, accuracy, save_checkpoint
@@ -139,7 +139,8 @@ class SimCLR(object):
         :param data: Input data.
         :param namelist: List of sequence names.
         """
-        scaler = GradScaler(enabled=self.args.fp16_precision)
+        _device_type = 'cuda' if 'cuda' in str(self.args.device) else 'cpu'
+        scaler = GradScaler(_device_type, enabled=self.args.fp16_precision)
 
         # save config file
         save_config_file(self.args.output_path, self.args)
@@ -155,7 +156,7 @@ class SimCLR(object):
 
                 contig_features = contig_features.to(self.args.device)
 
-                with autocast(enabled=self.args.fp16_precision):
+                with autocast(_device_type, enabled=self.args.fp16_precision):
                     features = self.model(contig_features)
                     logits, labels = self.info_nce_loss(features)
                     loss = self.criterion(logits, labels)
@@ -214,7 +215,8 @@ class SimCLR(object):
         :param data: Input data.
         :param namelist: List of sequence names.
         """
-        scaler = GradScaler(enabled=self.args.fp16_precision)
+        _device_type = 'cuda' if 'cuda' in str(self.args.device) else 'cpu'
+        scaler = GradScaler(_device_type, enabled=self.args.fp16_precision)
 
         # save config file
         save_config_file(self.args.output_path, self.args)
@@ -241,7 +243,7 @@ class SimCLR(object):
                 contig_features = contig_features.to(self.args.device)
                 # print(contig_features.shape)
 
-                with autocast(enabled=self.args.fp16_precision):
+                with autocast(_device_type, enabled=self.args.fp16_precision):
                     if self.args.addcovloss and not self.args.addkmerloss:
                         if self.args.pretrain_kmer_model_path !='no':
                             features, covemb, kmeremb = self.model(contig_features[:, -kmer_len:], contig_features[:, :-kmer_len])
@@ -365,7 +367,8 @@ class SimCLR(object):
 
         :param train_loader: Data loader for training.
         """
-        scaler = GradScaler(enabled=self.args.fp16_precision)
+        _device_type = 'cuda' if 'cuda' in str(self.args.device) else 'cpu'
+        scaler = GradScaler(_device_type, enabled=self.args.fp16_precision)
 
         # save config file
         save_config_file(self.args.output_path, self.args)
@@ -381,7 +384,7 @@ class SimCLR(object):
 
                 contig_features = contig_features.to(self.args.device)
 
-                with autocast(enabled=self.args.fp16_precision):
+                with autocast(_device_type, enabled=self.args.fp16_precision):
                     features = self.model(contig_features[:, :-128])
                     logits, labels = self.info_nce_loss(features)
                     loss = self.criterion(logits, labels)

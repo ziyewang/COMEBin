@@ -9,8 +9,11 @@ import scipy.sparse as sp
 import logging
 
 from igraph import Graph
+from sklearn.cluster import KMeans
+from sklearn.metrics.pairwise import euclidean_distances
 from sklearn.preprocessing import normalize
-from sklearn.cluster._kmeans import euclidean_distances, stable_cumsum, KMeans, check_random_state, row_norms, MiniBatchKMeans
+from sklearn.utils import check_random_state
+from sklearn.utils.extmath import row_norms
 
 from utils import get_length, calculateN50, save_result
 from scripts.gen_bins_from_tsv import gen_bins as gen_bins_from_tsv
@@ -100,7 +103,7 @@ def seed_kmeans_full(logger, contig_file: str, namelist: List[str], out_path: st
     output_temp = out_path + '_k_' + str(
         bin_number) + '_result.tsv'
     if not (os.path.exists(output_temp)):
-        km = KMeans(n_clusters=bin_number, n_jobs=-1, random_state=7, algorithm="full",
+        km = KMeans(n_clusters=bin_number, random_state=7, algorithm="lloyd", n_init=10,
                     init=functools.partial(partial_seed_init, seed_idx=seed_bacar_marker_idx))
         km.fit(X_mat, sample_weight=length_weight)
         idx = km.labels_
@@ -192,8 +195,10 @@ def partial_seed_init(X, n_clusters: int, random_state, seed_idx, n_local_trials
         # Choose center candidates by sampling with probability proportional
         # to the squared distance to the closest existing center
         rand_vals = random_state.random_sample(n_local_trials) * current_pot
-        candidate_ids = np.searchsorted(stable_cumsum(closest_dist_sq),
-                                        rand_vals)
+        candidate_ids = np.searchsorted(
+            np.cumsum(closest_dist_sq, dtype=np.float64),
+            rand_vals,
+        )
         # XXX: numerical imprecision can result in a candidate_id out of range
         np.clip(candidate_ids, None, closest_dist_sq.size - 1,
                 out=candidate_ids)
@@ -416,6 +421,4 @@ def cluster(logger, args, prefix=None):
             multiprocess.close()
             multiprocess.join()
         logger.info('multiprocess Done')
-
-
 

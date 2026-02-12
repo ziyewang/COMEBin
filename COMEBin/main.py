@@ -2,10 +2,39 @@ import argparse
 import logging
 import os
 import pandas as pd
+import sys
+import warnings
 
 from comebin_version import __version__ as ver
-from train_CLmodel import train_CLmodel
-from cluster import cluster
+
+
+def _resolve_checkm_data_path():
+    """
+    Resolve a CheckM data directory from the current runtime environment.
+
+    Preference order:
+      1) Existing CHECKM_DATA_PATH env var
+      2) $CONDA_PREFIX/checkm_data
+      3) sys.prefix/checkm_data
+      4) Parent of interpreter prefix/checkm_data
+    """
+    existing = os.environ.get("CHECKM_DATA_PATH")
+    if existing:
+        return existing
+
+    candidates = []
+    conda_prefix = os.environ.get("CONDA_PREFIX")
+    if conda_prefix:
+        candidates.append(os.path.join(conda_prefix, "checkm_data"))
+
+    candidates.append(os.path.join(sys.prefix, "checkm_data"))
+    candidates.append(os.path.join(os.path.dirname(sys.prefix), "checkm_data"))
+
+    for candidate in candidates:
+        if os.path.isfile(os.path.join(candidate, "taxon_marker_sets.tsv")):
+            return candidate
+
+    return None
 
 
 def arguments():
@@ -278,6 +307,13 @@ def main():
         args.output_path = args.out_augdata_path
 
     os.makedirs(args.output_path, exist_ok=True)
+
+    # Avoid matplotlib trying to write under ~/.matplotlib in restricted runtimes.
+    if not os.environ.get("MPLCONFIGDIR"):
+        mpl_config_dir = os.path.join(args.output_path, ".mplconfig")
+        os.makedirs(mpl_config_dir, exist_ok=True)
+        os.environ["MPLCONFIGDIR"] = mpl_config_dir
+
     handler = logging.FileHandler(args.output_path+'/comebin.log')
     handler.setLevel(logging.INFO)
     handler.setFormatter(formatter)
@@ -285,11 +321,13 @@ def main():
 
     ## training
     if args.subcmd == 'train':
+        from train_CLmodel import train_CLmodel
         logger.info('train')
         train_CLmodel(logger,args)
 
     ## clustering
     if args.subcmd == 'bin':
+        from cluster import cluster
         logger.info('bin')
         from utils import gen_seed
 
@@ -301,6 +339,7 @@ def main():
 
     ## clustering NoContrast
     if args.subcmd == 'nocontrast':
+        from cluster import cluster
         logger.info('NoContrast mode')
         from utils import get_kmer_coverage_aug0
 
@@ -356,6 +395,23 @@ def main():
     ###Generate the final results from the Leiden clustering results
     if args.subcmd == 'get_result':
         logger.info('get_result')
+        # checkm currently imports pkg_resources, which emits a noisy deprecation warning.
+        warnings.filterwarnings(
+            "ignore",
+            message="pkg_resources is deprecated as an API.*",
+            category=UserWarning,
+        )
+        # Keep CheckM from defaulting to ~/.checkm in restricted environments.
+        checkm_data_path = _resolve_checkm_data_path()
+        if checkm_data_path:
+            os.environ["CHECKM_DATA_PATH"] = checkm_data_path
+            logger.info("Using CHECKM_DATA_PATH:\t" + checkm_data_path)
+        else:
+            fallback_checkm_path = os.path.join(args.output_path, "checkm_data")
+            os.makedirs(fallback_checkm_path, exist_ok=True)
+            os.environ["CHECKM_DATA_PATH"] = fallback_checkm_path
+            logger.info("CHECKM_DATA_PATH was unset; using fallback path:\t" + fallback_checkm_path)
+
         from utils import gen_seed
         from get_final_result import run_get_final_result
 
@@ -367,4 +423,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
