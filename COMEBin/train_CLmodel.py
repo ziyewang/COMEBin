@@ -88,11 +88,9 @@ def train_CLmodel(logger, args):
             config_file= os.path.dirname(args.pretrain_kmer_model_path)+'/kmerMetric_config.yaml'
 
             from ruamel.yaml import YAML
-            from pathlib import Path
-
             yaml = YAML(typ='safe')
-
-            cnf = yaml.load(Path(config_file))
+            with open(config_file, "r", encoding="utf-8") as f:
+                cnf = yaml.load(f)
 
             ps = [cnf['dropout_value']]*(len(cnf['emb_szs'])-1)
             actn= nn.LeakyReLU()

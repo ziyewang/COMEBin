@@ -76,7 +76,7 @@ def save_result(result, filepath, namelist):
         os.makedirs(filedir)
     f = open(filepath, 'w')
     for contigIdx in range(len(result)):
-        f.write(namelist[contigIdx] + "\t" + str(result[contigIdx].item(0)) + "\n")
+        f.write(namelist[contigIdx] + "\t" + str(result[contigIdx].item()) + "\n")
     f.close()
 
 
@@ -106,7 +106,7 @@ def get_kmer_coverage_aug0(data_path):
     shuffled_covMat = pd.read_csv(cov_file, sep='\t', usecols=range(1, covHeader.shape[1])).values
     shuffled_namelist = pd.read_csv(cov_file, sep='\t', usecols=range(1)).values[:, 0]
 
-    covIdxArr = np.empty(len(mapObj), dtype=np.int)
+    covIdxArr = np.empty(len(mapObj), dtype=np.int64)
     for contigIdx in range(len(shuffled_namelist)):
         if shuffled_namelist[contigIdx].split('_aug')[0] in mapObj:
             covIdxArr[mapObj[shuffled_namelist[contigIdx].split('_aug')[0]]] = contigIdx
@@ -116,7 +116,7 @@ def get_kmer_coverage_aug0(data_path):
     shuffled_compositMat = pd.read_csv(com_file, sep=',', usecols=range(1, compositHeader.shape[1])).values
     shuffled_namelist = pd.read_csv(com_file, sep=',', usecols=range(1)).values[:, 0]
 
-    covIdxArr = np.empty(len(mapObj), dtype=np.int)
+    covIdxArr = np.empty(len(mapObj), dtype=np.int64)
     for contigIdx in range(len(shuffled_namelist)):
         if shuffled_namelist[contigIdx].split('_aug')[0] in mapObj:
             covIdxArr[mapObj[shuffled_namelist[contigIdx].split('_aug')[0]]] = contigIdx
@@ -153,7 +153,6 @@ def get_kmerMetric_emb(kmer_model_path,compositMats,device=torch.device('cpu'),k
     config_file = os.path.dirname(kmer_model_path) + '/kmerMetric_config.yaml'
 
     from ruamel.yaml import YAML
-    from pathlib import Path
     import torch.nn as nn
     from models.mlp import EmbeddingNet
     from sklearn.preprocessing import normalize
@@ -161,7 +160,8 @@ def get_kmerMetric_emb(kmer_model_path,compositMats,device=torch.device('cpu'),k
 
     yaml = YAML(typ='safe')
 
-    cnf = yaml.load(Path(config_file))
+    with open(config_file, "r", encoding="utf-8") as f:
+        cnf = yaml.load(f)
 
     ps = [cnf['dropout_value']] * (len(cnf['emb_szs']) - 1)
     actn = nn.LeakyReLU()
@@ -225,13 +225,22 @@ def gen_seed(logger, contig_file: str, threads: int, contig_length_threshold: in
         os.system(fragCmd)
 
     if os.path.exists(fragResultURL):
-        if not (os.path.exists(hmmResultURL)):
+        if (not os.path.exists(hmmResultURL)) or os.path.getsize(hmmResultURL) == 0:
             hmmCmd = hmmExeURL + " --domtblout " + hmmResultURL + " --cut_tc --cpu " + str(
                 threads) + " " + markerURL + " " + fragResultURL + " 1>" + hmmResultURL + ".out 2>" + hmmResultURL + ".err"
             logger.info("exec cmd: " + hmmCmd)
-            os.system(hmmCmd)
+            hmm_ret = os.system(hmmCmd)
+            if hmm_ret != 0 or (os.path.exists(hmmResultURL) and os.path.getsize(hmmResultURL) == 0):
+                # Newer HMMER builds can reject --cut_tc for marker files without TC thresholds.
+                logger.info("hmmsearch with --cut_tc failed; retrying with an E-value cutoff.")
+                if os.path.exists(hmmResultURL):
+                    os.remove(hmmResultURL)
+                hmmCmd = hmmExeURL + " --domtblout " + hmmResultURL + " -E 1e-10 --cpu " + str(
+                    threads) + " " + markerURL + " " + fragResultURL + " 1>" + hmmResultURL + ".fallback.out 2>" + hmmResultURL + ".fallback.err"
+                logger.info("exec cmd: " + hmmCmd)
+                os.system(hmmCmd)
 
-        if os.path.exists(hmmResultURL):
+        if os.path.exists(hmmResultURL) and os.path.getsize(hmmResultURL) > 0:
             if not (os.path.exists(seedURL)):
                 markerCmd = markerExeURL + " " + hmmResultURL + " " + contig_file + " " + str(
                     contig_length_threshold) + " " + seedURL
@@ -244,7 +253,7 @@ def gen_seed(logger, contig_file: str, threads: int, contig_length_threshold: in
                 logger.info("markerCmd failed! Not exist: " + markerCmd)
                 candK = 0
         else:
-            logger.info("Hmmsearch failed! Not exist: " + hmmResultURL)
+            logger.info("Hmmsearch failed! Not exist or empty: " + hmmResultURL)
             sys.exit()
     else:
         logger.info("FragGeneScan failed! Not exist: " + fragResultURL)
