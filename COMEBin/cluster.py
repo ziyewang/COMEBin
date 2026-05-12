@@ -377,26 +377,28 @@ def cluster(logger, args, prefix=None):
     # #### method1
     os.makedirs(output_path, exist_ok=True)
 
+    if not os.path.exists(seed_file):
+        logger.warning("Seed file not found: %s. Skipping seed k-means clustering." % seed_file)
+    else:
+        seed_namelist = pd.read_csv(seed_file, header=None, sep='\t', usecols=range(1)).values[:, 0]
+        seed_num = len(np.unique(seed_namelist))
 
-    seed_namelist = pd.read_csv(seed_file, header=None, sep='\t', usecols=range(1)).values[:, 0]
-    seed_num = len(np.unique(seed_namelist))
+        mode = 'weight_seed_kmeans'
+        if prefix:
+            mode = mode + '_' + prefix
+        logger.info("Run weighted seed k-means for obtaining the SCG information of the contigs within a manageable time during the final step.")
+        bin_nums = [seed_num]
 
-    mode = 'weight_seed_kmeans'
-    if prefix:
-        mode = mode + '_' + prefix
-    logger.info("Run weighted seed k-means for obtaining the SCG information of the contigs within a manageable time during the final step.")
-    bin_nums = [seed_num]
+        if args.cluster_num:
+            bin_nums.append(args.cluster_num)
 
-    if args.cluster_num:
-        bin_nums.append(args.cluster_num)
-
-    logger.info("Bin_numbers:\t"+str(bin_nums))
-    for k in bin_nums:
-        logger.info(k)
-        if k < 2:
-            logger.warning("Skipping seed k-means with fewer than 2 clusters.")
-            continue
-        seed_kmeans_full(logger, contig_file, namelist, output_path, norm_embeddings, k, mode, length_weight, seed_file)
+        logger.info("Bin_numbers:\t"+str(bin_nums))
+        for k in bin_nums:
+            logger.info(k)
+            if k < 2:
+                logger.warning("Skipping seed k-means with fewer than 2 clusters.")
+                continue
+            seed_kmeans_full(logger, contig_file, namelist, output_path, norm_embeddings, k, mode, length_weight, seed_file)
 
     import multiprocessing
 
