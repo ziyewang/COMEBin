@@ -24,11 +24,17 @@ help_message () {
 	echo "  -b INT          batch size for training process (default=1024)"
 	echo "";}
 
-run_file_path=$(dirname $(which run_comebin.sh))
+# Determine script location: works both when script is in PATH and when called via bash
+if command -v run_comebin.sh >/dev/null 2>&1; then
+    script_path=$(command -v run_comebin.sh)
+else
+    script_path="$0"
+fi
+run_file_path=$(cd "$(dirname "$script_path")/.." && pwd)
 
-if [[ $? -ne 0 ]]; then
-	echo "cannot find run_comebin.sh file - something went wrong with the installation!"
-	exit 1
+if [ -z "$run_file_path" ] || [ ! -d "$run_file_path" ]; then
+    echo "cannot find run_comebin.sh file - something went wrong with the installation!"
+    exit 1
 fi
 
 
