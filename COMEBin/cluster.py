@@ -31,7 +31,7 @@ logger.addHandler(console_hdr)
 
 
 def fit_hnsw_index(logger, features,num_threads, ef: int = 100, M: int = 16,
-                   space: str = 'l2', save_index_file: bool = False) -> hnswlib.Index:
+                   space: str = 'l2', save_index_file: bool = False):
     """
     Fit an HNSW index with the given features using the HNSWlib library; Convenience function to create HNSW graph.
 
@@ -42,13 +42,14 @@ def fit_hnsw_index(logger, features,num_threads, ef: int = 100, M: int = 16,
     :param space: The space in which the index operates (default: 'l2').
     :param save_index_file: The path to save the HNSW index file (optional).
 
-    :return: The HNSW index created using the given features.
-
-    This function fits an HNSW index to the provided features, allowing efficient similarity search in high-dimensional spaces.
+    :return: The HNSW index created using the given features, or None if too few elements.
     """
 
     time_start = time.time()
     num_elements = len(features)
+    if num_elements < 2:
+        logger.warning("Too few elements (%d) for HNSW index, skipping." % num_elements)
+        return None
     labels_index = np.arange(num_elements)
     EMBEDDING_SIZE = len(features[0])
 
@@ -95,6 +96,9 @@ def seed_kmeans_full(logger, contig_file: str, namelist: List[str], out_path: st
     """
     out_path = out_path + prefix
     seed_bacar_marker_idx = gen_seed_idx(seed_bacar_marker_url, contig_id_list=namelist)
+    if len(seed_bacar_marker_idx) == 0:
+        logger.warning("No marker seeds found, skipping seed k-means.")
+        return
     time_start = time.time()
     # run seed-kmeans; length weight
     output_temp = out_path + '_k_' + str(
@@ -121,10 +125,15 @@ def gen_seed_idx(seedURL: str, contig_id_list: List[str]) -> List[int]:
     :return: List[int]
     """
     seed_list = []
-    with open(seedURL) as f:
-        for line in f:
-            if line.rstrip('\n') in contig_id_list:
-                seed_list.append(line.rstrip('\n'))
+    try:
+        with open(seedURL) as f:
+            for line in f:
+                if line.rstrip('\n') in contig_id_list:
+                    seed_list.append(line.rstrip('\n'))
+    except FileNotFoundError:
+        return []
+    if not seed_list:
+        return []
     name_map = dict(zip(contig_id_list, range(len(contig_id_list))))
     seed_idx = [name_map[seed_name] for seed_name in seed_list]
     return seed_idx
@@ -280,6 +289,9 @@ def run_leiden(output_file: str, namelist: List[str],
     targets = targets[index]
     wei = wei[index]
     vcount = len(norm_embeddings)
+    if len(sources) == 0 or vcount < 2:
+        logger.warning("Too few edges/nodes (%d nodes, %d edges) for Leiden clustering, skipping." % (vcount, len(sources)))
+        return
     edgelist = list(zip(sources, targets))
     g = Graph(vcount, edgelist)
 
@@ -351,6 +363,10 @@ def cluster(logger, args, prefix=None):
     namelist = namelist[np.array(length_weight) >= contig_len]
     length_weight = list(np.array(length_weight)[np.array(length_weight) >= contig_len])
 
+    if len(namelist) < 2:
+        logger.warning("Too few contigs (%d) after length filtering for clustering. Skipping." % len(namelist))
+        return
+
     if args.not_l2normaize:
         norm_embeddings = embMat
     else:
@@ -376,6 +392,9 @@ def cluster(logger, args, prefix=None):
     logger.info("Bin_numbers:\t"+str(bin_nums))
     for k in bin_nums:
         logger.info(k)
+        if k < 2:
+            logger.warning("Skipping seed k-means with fewer than 2 clusters.")
+            continue
         seed_kmeans_full(logger, contig_file, namelist, output_path, norm_embeddings, k, mode, length_weight, seed_file)
 
     import multiprocessing
@@ -390,15 +409,25 @@ def cluster(logger, args, prefix=None):
     max_edges_list = [100]
     for max_edges in max_edges_list:
         p = fit_hnsw_index(logger, norm_embeddings, num_workers, ef=max_edges * 10)
+        if p is None:
+            logger.warning("Skipping Leiden clustering due to insufficient contigs.")
+            continue
         seed_bacar_marker_idx = gen_seed_idx(seed_file, contig_id_list=namelist)
         initial_list = list(np.arange(len(namelist)))
         is_membership_fixed = [i in seed_bacar_marker_idx for i in initial_list]
 
         time_start = time.time()
-        ann_neighbor_indices, ann_distances = p.knn_query(norm_embeddings, max_edges+1, num_threads=num_workers)
+        max_k = min(max_edges + 1, len(norm_embeddings))
+        if max_k < 2:
+            logger.warning("Too few elements for kNN query, skipping Leiden clustering.")
+            continue
+        ann_neighbor_indices, ann_distances = p.knn_query(norm_embeddings, max_k, num_threads=num_workers)
         #ann_distances is l2 distance's square
         time_end = time.time()
         logger.info('knn query time cost:\t' +str(time_end - time_start) + "s")
+
+        # Adjust max_edges to the actual number of neighbors returned (minus self)
+        actual_max_edges = min(max_edges, max_k - 1)
 
 
         with multiprocessing.Pool(num_workers) as multiprocess:
@@ -409,7 +438,7 @@ def cluster(logger, args, prefix=None):
                             bandwidth) + '_res_maxedges' + str(max_edges) + 'respara_'+str(para)+'_partgraph_ratio_'+str(partgraph_ratio)+'.tsv'
 
                         if not (os.path.exists(output_file)):
-                            multiprocess.apply_async(run_leiden, (output_file, namelist, ann_neighbor_indices, ann_distances, length_weight, max_edges, norm_embeddings,
+                            multiprocess.apply_async(run_leiden, (output_file, namelist, ann_neighbor_indices, ann_distances, length_weight, actual_max_edges, norm_embeddings,
                                                                         bandwidth, 'l2', initial_list,is_membership_fixed,
                                                                         para, partgraph_ratio))
 

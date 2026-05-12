@@ -245,8 +245,8 @@ def gen_seed(logger, contig_file: str, threads: int, contig_length_threshold: in
                 candK = 0
         else:
             logger.info("Hmmsearch failed! Not exist: " + hmmResultURL)
-            sys.exit()
+            candK = 0
     else:
         logger.info("FragGeneScan failed! Not exist: " + fragResultURL)
-        sys.exit()
+        candK = 0
     return candK

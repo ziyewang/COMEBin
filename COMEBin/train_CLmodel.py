@@ -55,9 +55,14 @@ def train_CLmodel(logger, args):
         train_dataset = torch.utils.data.TensorDataset(*[dataset[i][np.array(length_weight) >= args.contig_len]
                                                          for i in range(args.n_views)])
 
+    # Use drop_last=False to avoid dropping all data when dataset < batch_size
+    if len(train_dataset) == 0:
+        logger.warning("No contigs passed length filtering. Skipping training and producing empty embeddings.")
+        return
+
     train_loader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=args.batch_size, shuffle=True,
-        num_workers=args.workers, pin_memory=True, drop_last=True)
+        train_dataset, batch_size=min(args.batch_size, len(train_dataset)), shuffle=True,
+        num_workers=args.workers, pin_memory=True, drop_last=False)
 
     # Set embedder model.
     if not args.add_model_for_coverage:
