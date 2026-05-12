@@ -10,7 +10,8 @@ import logging
 
 from igraph import Graph
 from sklearn.preprocessing import normalize
-from sklearn.cluster._kmeans import euclidean_distances, stable_cumsum, KMeans, check_random_state, row_norms, MiniBatchKMeans
+from sklearn.cluster._kmeans import euclidean_distances, KMeans, check_random_state, row_norms, MiniBatchKMeans
+from sklearn.utils.extmath import stable_cumsum
 
 from utils import get_length, calculateN50, save_result
 from scripts.gen_bins_from_tsv import gen_bins as gen_bins_from_tsv
