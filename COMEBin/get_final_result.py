@@ -1,13 +1,14 @@
 from scripts.unitem_profile import Profile, make_sure_path_exists
 import copy
 import os
+import shutil
 
 from collections import defaultdict
 import pandas as pd
 
 from scripts.unitem_common import read_bins
 from scripts.unitem_markers import Markers
-from filter_small_bins import filter_small_bins
+from filter_small_bins import filter_small_bins, gen_bins
 
 from typing import List, Optional, Union, Dict
 
@@ -241,10 +242,12 @@ def run_get_final_result(logger, args, seed_num: int, num_threads: int = 40,
 
     if bac_mg_table and ar_mg_table and os.path.exists(bac_mg_table) and os.path.exists(ar_mg_table):
         best_method = estimate_bins_quality_nobins(bac_mg_table, ar_mg_table, cluster_res, ignore_kmeans_res=ignore_kmeans_res)
+        logger.info('Final result:\t' + cluster_res + best_method)
+        filter_small_bins(logger, args.contig_file, cluster_res + best_method, args)
     else:
-        logger.warning("CheckM marker gene tables not available. Picking first available clustering result.")
+        logger.warning("CheckM marker gene tables not available. Using first available clustering result directly (skipping size filter).")
         best_method = tsv_files[0]
-
-    logger.info('Final result:\t' + cluster_res + best_method)
-    filter_small_bins(logger, args.contig_file, cluster_res + best_method, args)
+        logger.info('Final result:\t' + cluster_res + best_method)
+        gen_bins(args.contig_file, cluster_res + best_method, args.output_path + '/comebin_res_bins')
+        shutil.copy2(cluster_res + best_method, args.output_path + '/comebin_res.tsv')
 
