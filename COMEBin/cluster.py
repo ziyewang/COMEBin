@@ -105,7 +105,7 @@ def seed_kmeans_full(logger, contig_file: str, namelist: List[str], out_path: st
     output_temp = out_path + '_k_' + str(
         bin_number) + '_result.tsv'
     if not (os.path.exists(output_temp)):
-        km = KMeans(n_clusters=bin_number, n_jobs=-1, random_state=7, algorithm="full",
+        km = KMeans(n_clusters=bin_number, random_state=7,
                     init=functools.partial(partial_seed_init, seed_idx=seed_bacar_marker_idx))
         km.fit(X_mat, sample_weight=length_weight)
         idx = km.labels_

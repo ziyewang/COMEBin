@@ -106,7 +106,7 @@ def get_kmer_coverage_aug0(data_path):
     shuffled_covMat = pd.read_csv(cov_file, sep='\t', usecols=range(1, covHeader.shape[1])).values
     shuffled_namelist = pd.read_csv(cov_file, sep='\t', usecols=range(1)).values[:, 0]
 
-    covIdxArr = np.empty(len(mapObj), dtype=np.int)
+    covIdxArr = np.empty(len(mapObj), dtype=int)
     for contigIdx in range(len(shuffled_namelist)):
         if shuffled_namelist[contigIdx].split('_aug')[0] in mapObj:
             covIdxArr[mapObj[shuffled_namelist[contigIdx].split('_aug')[0]]] = contigIdx
@@ -116,7 +116,7 @@ def get_kmer_coverage_aug0(data_path):
     shuffled_compositMat = pd.read_csv(com_file, sep=',', usecols=range(1, compositHeader.shape[1])).values
     shuffled_namelist = pd.read_csv(com_file, sep=',', usecols=range(1)).values[:, 0]
 
-    covIdxArr = np.empty(len(mapObj), dtype=np.int)
+    covIdxArr = np.empty(len(mapObj), dtype=int)
     for contigIdx in range(len(shuffled_namelist)):
         if shuffled_namelist[contigIdx].split('_aug')[0] in mapObj:
             covIdxArr[mapObj[shuffled_namelist[contigIdx].split('_aug')[0]]] = contigIdx
