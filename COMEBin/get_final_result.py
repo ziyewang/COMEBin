@@ -208,12 +208,14 @@ def run_get_final_result(logger, args, seed_num: int, num_threads: int = 40,
     """
     logger.info("Seed_num:\t" + str(seed_num))
 
-    if not (args.bac_mg_table and args.ar_mg_table):
+    if res_name is None:
+        res_name = 'weight_seed_kmeans_k_' + str(seed_num) + '_result.tsv'
+    seed_bin_dir = args.output_path + '/cluster_res/' + res_name + '_bins'
+
+    if os.path.exists(seed_bin_dir) and not (args.bac_mg_table and args.ar_mg_table):
         logger.info("Run unitem profile:\t" + str(seed_num))
         bin_dirs = {}
-        if res_name==None:
-            res_name = 'weight_seed_kmeans_k_' + str(seed_num) + '_result.tsv'
-        bin_dirs[res_name] = (args.output_path + '/cluster_res/' + res_name + '_bins', 'fa')
+        bin_dirs[res_name] = (seed_bin_dir, 'fa')
 
         output_dir = args.output_path + '/cluster_res/unitem_profile'
 
@@ -229,8 +231,20 @@ def run_get_final_result(logger, args, seed_num: int, num_threads: int = 40,
         bac_mg_table = args.bac_mg_table
         ar_mg_table = args.ar_mg_table
 
-    best_method = estimate_bins_quality_nobins(bac_mg_table, ar_mg_table, args.output_path + '/cluster_res/',ignore_kmeans_res=ignore_kmeans_res)
+    cluster_res = args.output_path + '/cluster_res/'
+    tsv_files = [f for f in os.listdir(cluster_res) if f.endswith('.tsv') and not f.startswith('weight')]
+    tsv_files.sort()
 
-    logger.info('Final result:\t'+args.output_path + '/cluster_res/'+best_method)
-    filter_small_bins(logger, args.contig_file, args.output_path + '/cluster_res/'+best_method, args)
+    if not tsv_files:
+        logger.warning("No clustering result .tsv files found. Skipping final result generation.")
+        return
+
+    if bac_mg_table and ar_mg_table and os.path.exists(bac_mg_table) and os.path.exists(ar_mg_table):
+        best_method = estimate_bins_quality_nobins(bac_mg_table, ar_mg_table, cluster_res, ignore_kmeans_res=ignore_kmeans_res)
+    else:
+        logger.warning("CheckM marker gene tables not available. Picking first available clustering result.")
+        best_method = tsv_files[0]
+
+    logger.info('Final result:\t' + cluster_res + best_method)
+    filter_small_bins(logger, args.contig_file, cluster_res + best_method, args)
 

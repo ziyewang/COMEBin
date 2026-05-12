@@ -38,7 +38,9 @@ class SimCLR(object):
         :param features: Input features.
         :return: Logits and labels for the loss.
         """
-        labels = torch.cat([torch.arange(self.args.batch_size) for i in range(self.args.n_views)], dim=0)
+        n_views = self.args.n_views
+        batch_size = features.shape[0] // n_views
+        labels = torch.cat([torch.arange(batch_size) for i in range(n_views)], dim=0)
         labels = (labels.unsqueeze(0) == labels.unsqueeze(1)).float()
         labels = labels.to(self.args.device)
 
@@ -71,7 +73,9 @@ class SimCLR(object):
         :param features: Input features.
         :return: Logits and labels for the loss.
         """
-        labels = torch.cat([torch.arange(self.args.batch_size) for i in range(self.args.n_views)], dim=0)
+        n_views = self.args.n_views
+        batch_size = features.shape[0] // n_views
+        labels = torch.cat([torch.arange(batch_size) for i in range(n_views)], dim=0)
         labels = (labels.unsqueeze(0) == labels.unsqueeze(1)).float()
         labels = labels.to(self.args.device)
 
@@ -104,7 +108,9 @@ class SimCLR(object):
         :param features: Input features.
         :return: Logits and labels for the loss.
         """
-        labels = torch.cat([torch.arange(self.args.batch_size) for i in range(self.args.n_views)], dim=0)
+        n_views = self.args.n_views
+        batch_size = features.shape[0] // n_views
+        labels = torch.cat([torch.arange(batch_size) for i in range(n_views)], dim=0)
         labels = (labels.unsqueeze(0) == labels.unsqueeze(1)).float()
         labels = labels.to(self.args.device)
 
