@@ -1,69 +1,63 @@
-#!/usr/bin/env python
-from __future__ import print_function
-import os
-import numpy as np
-import pandas as pd
 from itertools import product
-from Bio import SeqIO
-# optimized sliding window function from
-# http://stackoverflow.com/a/7636587
-from itertools import tee
-from collections import Counter, OrderedDict
-import pandas as p
 
-def window(seq,n):
-    els = tee(seq,n)
-    for i,el in enumerate(els):
-        for _ in range(i):
-            next(el, None)
-    return zip(*els)
+import numpy as np
 
-def generate_feature_mapping(kmer_len):
-    BASE_COMPLEMENT = {"A":"T","T":"A","G":"C","C":"G"}
-    kmer_hash = {}
-    counter = 0
-    for kmer in product("ATGC",repeat=kmer_len):
-        if kmer not in kmer_hash:
-            kmer_hash[kmer] = counter
-            rev_compl = tuple([BASE_COMPLEMENT[x] for x in reversed(kmer)])
-            kmer_hash[rev_compl] = counter
-            counter += 1
-    return kmer_hash,counter
 
-def generate_features_from_fasta(fasta_file: str, length_threshold: int, kmer_len: int, outfile: str):
-    """
-    Generate composition features from a FASTA file.
+_BASE_COMPLEMENT = {'A': 'T', 'T': 'A', 'G': 'C', 'C': 'G'}
+_BASE_CODE = {'A': 0, 'T': 1, 'G': 2, 'C': 3}
+_ASCII_TO_BASE = np.full(256, 255, dtype=np.uint8)
+_ASCII_TO_BASE[[ord('A'), ord('a')]] = 0
+_ASCII_TO_BASE[[ord('T'), ord('t')]] = 1
+_ASCII_TO_BASE[[ord('G'), ord('g')]] = 2
+_ASCII_TO_BASE[[ord('C'), ord('c')]] = 3
+_ASCII_TO_BASE.setflags(write=False)
 
-    :param fasta_file: The path to the input FASTA file.
-    :param length_threshold: The minimum length of sequences to include in the feature generation.
-    :param kmer_len: The length of k-mers to consider.
-    :param outfile: The path to the output CSV file where features will be saved.
-    """
-    kmer_dict,nr_features = generate_feature_mapping(kmer_len)
 
-    # Store composition vectors in a dictionary before creating dataframe
-    composition_d = OrderedDict()
-    contig_lengths = OrderedDict()
-    for seq in SeqIO.parse(fasta_file,"fasta"):
-        seq_len = len(seq)
-        if seq_len <= length_threshold:
+def _encode_kmer(kmer):
+    encoded = 0
+    for base in kmer:
+        encoded = encoded * 4 + _BASE_CODE[base]
+    return encoded
+
+
+def build_feature_lookup(kmer_len=4):
+    if kmer_len != 4:
+        raise ValueError('COMEBin currently requires kmer_len=4.')
+
+    lookup = np.full(4 ** kmer_len, 255, dtype=np.uint8)
+    n_features = 0
+    for kmer in product('ATGC', repeat=kmer_len):
+        encoded = _encode_kmer(kmer)
+        if lookup[encoded] != 255:
             continue
-        contig_lengths[seq.id] = seq_len
-        # Create a list containing all kmers, translated to integers
-        kmers = [
-            kmer_dict[kmer_tuple]
-            for kmer_tuple
-            in window(str(seq.seq).upper(), kmer_len)
-            if kmer_tuple in kmer_dict
-        ]
-        kmers.append(nr_features-1)
-        composition_v = np.bincount(np.array(kmers,dtype=np.int64))
-        composition_v[-1]-=1
-        composition_d[seq.id] = composition_v 
-    df = p.DataFrame.from_dict(composition_d, orient='index', dtype=float)
-    df.to_csv(outfile)
+        reverse_complement = tuple(_BASE_COMPLEMENT[base] for base in reversed(kmer))
+        lookup[encoded] = n_features
+        lookup[_encode_kmer(reverse_complement)] = n_features
+        n_features += 1
 
-def run_gen_kmer(fasta_file, length_threshold, kmer_len):
-    outfile = os.path.join(os.path.dirname(fasta_file), 'kmer_' + str(kmer_len) + '_f' + str(length_threshold) + '.csv')
-    generate_features_from_fasta(fasta_file,length_threshold,kmer_len,outfile)
+    if n_features != 136 or np.any(lookup == 255):
+        raise RuntimeError(f'Invalid canonical 4-mer lookup: features={n_features}.')
+    lookup.setflags(write=False)
+    return lookup, n_features
 
+
+def count_kmers(sequence, lookup, n_features, kmer_len=4):
+    if len(sequence) < kmer_len:
+        return np.zeros(n_features, dtype='<u4')
+
+    n_windows = len(sequence) - kmer_len + 1
+    if n_windows > np.iinfo(np.uint32).max:
+        raise OverflowError('The sequence contains too many k-mer windows for uint32 counts.')
+
+    sequence_bytes = np.frombuffer(sequence.encode('ascii', errors='replace'), dtype=np.uint8)
+    base_codes = _ASCII_TO_BASE[sequence_bytes]
+    windows = np.lib.stride_tricks.sliding_window_view(base_codes, kmer_len)
+    valid_windows = windows[np.all(windows < 4, axis=1)]
+    encoded = np.zeros(valid_windows.shape[0], dtype=np.uint8)
+    for position in range(kmer_len):
+        encoded *= 4
+        encoded += valid_windows[:, position]
+
+    feature_ids = lookup[encoded]
+    counts = np.bincount(feature_ids, minlength=n_features)
+    return counts.astype('<u4', copy=False)

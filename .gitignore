@@ -1,0 +1,13 @@
+/data/
+
+# Python bytecode and cache directories
+__pycache__/
+*.py[cod]
+
+# Editor swap files
+*.swp
+*.swo
+
+# Local Markdown documents except the public README
+*.md
+!/README.md

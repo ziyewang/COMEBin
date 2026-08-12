@@ -24,24 +24,24 @@ Among them, the network structure used in contrastive learning includes two part
 COMEBin requires only a standard computer with enough RAM to support the in-memory operations.
 
 ### OS Requirements
-COMEBin v1.0.0 is supported and tested in Linux systems.
+COMEBin v1.1.0 is supported and tested in Linux systems.
 
 ## <a name="install"></a>Install COMEBin via bioconda
-COMEBin can be installed as a Bioconda's package.
+COMEBin can be installed from Bioconda with the GPU-enabled PyTorch build from conda-forge:
+```sh
+conda create -n comebin_env comebin pytorch-gpu cuda-version=12.6 \
+  --channel conda-forge --channel bioconda --strict-channel-priority
+conda activate comebin_env
+```
+To use CUDA 13.0 instead, replace `12.6` with `13.0`. For a CPU-only environment, use:
 
-To run COMEBin with CPU only:
 ```sh
-conda create -n comebin_env
+conda create -n comebin_env comebin pytorch-cpu \
+  --channel conda-forge --channel bioconda --strict-channel-priority
 conda activate comebin_env
-conda install -c conda-forge -c bioconda comebin
 ```
-To run COMEBin with GPU (which provides faster performance when a GPU is available), you should also install PyTorch with GPU support:
-```sh
-conda create -n comebin_env
-conda activate comebin_env
-conda install -c conda-forge -c bioconda comebin
-conda install pytorch pytorch-cuda=11.8 -c pytorch -c nvidia -c conda-forge
-```
+
+The Bioconda package declares PyTorch as a runtime dependency. The `pytorch-gpu` and `pytorch-cpu` metapackages select the corresponding conda-forge build.
 
 ## <a name="started"></a>Install COMEBin via source code
 You can also install COMEBin from the source code. 
@@ -55,8 +55,11 @@ Then, create an environment to run COMEBin.
 ```sh
 cd path_to_COMEBin
 conda env create -f comebin_env.yaml
-conda activate comebin_env
+conda activate COMEBin
+python -m pip install torch --index-url https://download.pytorch.org/whl/cu126
 ```
+
+`comebin_env.yaml` installs COMEBin's other dependencies but intentionally does not install PyTorch. The command above installs the CUDA 12.6 build by default. For the CUDA 13.0 build or a CPU-only build, use the [official PyTorch installation selector](https://pytorch.org/get-started/locally/).
 
 ## <a name="demo"></a>A test dataset to demo COMEBin
 We provide a small dataset to demo and test the software. Test data is available at https://drive.google.com/file/d/1xWpN2z8JTaAzWW4TcOl0Lr4Y_x--Fs5s/view?usp=sharing.
@@ -67,12 +70,11 @@ BAM files: comebin_test_data/bamfiles/SRR5720343.bam
 ```
 Run COMEBin on the test dataset:
 ```sh
-cd path_to_COMEBin/COMEBin
-
-CUDA_VISIBLE_DEVICES=0 bash run_comebin.sh -a path_to_comebin_test_data/BATS_SAMN07137077_METAG.scaffolds.min500.fasta.f1k.fasta \
+CUDA_VISIBLE_DEVICES=0 bash path_to_COMEBin/COMEBin/run_comebin.sh -a path_to_comebin_test_data/BATS_SAMN07137077_METAG.scaffolds.min500.fasta.f1k.fasta \
 -p path_to_comebin_test_data/bamfiles \
 -o path_to_comebin_test_data/run_comebin_test \
 -n 6 \
+-d cuda \
 -t 40
 ```
 Excepted output is given in path_to_comebin_test_data/run_comebin_test
@@ -103,14 +105,14 @@ Options:
 
         -a STR          metagenomic assembly file
         -o STR          output directory (to save the coverage files)
-	-b STR          directory for the bam files (optional)
+        -b STR          directory for the bam files (optional)
         -t INT          number of threads (default=1)
         -m INT          amount of RAM available (default=4)
         -l INT          minimum contig length to the bin (default=1000bp).
         --single-end    non-paired reads mode (provide *.fastq files)
         --interleaved   input read files contain interleaved paired-end reads
         -f              Forward read suffix for paired reads (default="_1.fastq")
-	-r              Reverse read suffix for paired reads (default="_2.fastq")
+        -r              Reverse read suffix for paired reads (default="_2.fastq")
 
 ```
 
@@ -132,33 +134,19 @@ conda activate comebin_env
 run_comebin.sh -a ${contig_file} \
 -o ${output_path} \
 -p ${path_to_bamfiles} \
+-d cuda \
 -t 40
 ```
 
 ### Run COMEBin via source code
 ```sh
-conda activate comebin_env
+conda activate COMEBin
 
-cd path_to_COMEBin/COMEBin
-
-bash run_comebin.sh -a ${contig_file} \
+bash path_to_COMEBin/COMEBin/run_comebin.sh -a ${contig_file} \
 -o ${output_path} \
 -p ${path_to_bamfiles} \
+-d cuda \
 -t 40
-```
-```sh
-Usage: run_comebin.sh [options] -a contig_file -o output_dir -p bam_file_path
-Options:
-
-  -a STR          metagenomic assembly file
-  -o STR          output directory
-  -p STR          path to access to the bam files
-  -n INT          number of views for contrastive multiple-view learning (default=6)
-  -t INT          number of threads (default=5)
-  -l FLOAT        temperature in loss function (default=0.07 for assemblies with an N50 > 10000, default=0.15 for others)
-  -e INT          embedding size for combine network (default=2048)
-  -c INT          embedding size for coverage network (default=2048)
-  -b INT          batch size for training process (default=1024)
 ```
 
 ## <a name="References"></a>References

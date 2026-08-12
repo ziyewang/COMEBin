@@ -3,7 +3,29 @@ use strict;
 
 my $COV_CUTOFF = 0.4;
 
-gethmmmarker($ARGV[0], $ARGV[1], $ARGV[2], $ARGV[3]);
+if (scalar(@ARGV) < 4)
+{
+	print STDERR "Usage: test_getmarker_2quarter.pl HMMOUT FASTA MIN_LENGTH OUTPUT\n";
+	exit 64;
+}
+
+my $status = gethmmmarker($ARGV[0], $ARGV[1], $ARGV[2], $ARGV[3]);
+if ($status == 2)
+{
+	print STDERR "Marker hits were found, but none matched input contig identifiers.\n";
+	exit 2;
+}
+if ($status != 0)
+{
+	print STDERR "Marker hits mapped to input contigs, but no usable marker seed set could be generated.\n";
+	exit 3;
+}
+if (!-s $ARGV[3])
+{
+	print STDERR "Marker parsing completed but produced an empty seed set.\n";
+	exit 4;
+}
+exit 0;
 #countmarker($ARGV[0], $ARGV[1], $ARGV[2], $ARGV[3], $ARGV[4]);
 
 # void gethmmmarker(input hmm output, fasta file, min seq length, output, is_harder);
@@ -33,9 +55,10 @@ sub gethmmmarker
 	my @queryseqnum;
 	my @querylen;
 	my $tmp1;
+	my $matched_identifier_count = 0;
 
 	# Read fasta file
-	open(LOCALFILE, "<$fasta_f");
+	open(LOCALFILE, "<", $fasta_f) || die "Cannot open fasta file $fasta_f\n";
 	while(defined($localine = <LOCALFILE>))
 	{
 		chomp($localine);
@@ -53,7 +76,7 @@ sub gethmmmarker
 
 	# Read HMM output
 	$current = "";
-	open(LOCALFILE, "<$hmm") || die "Cannot open hmm output file $hmm\n";
+	open(LOCALFILE, "<", $hmm) || die "Cannot open hmm output file $hmm\n";
 	while(defined($localine = <LOCALFILE>))
 	{
 		chomp($localine);
@@ -62,13 +85,18 @@ sub gethmmmarker
 			next;
 		}
 		@arr = split(/[ ]+/, $localine);
+		if (scalar(@arr) < 17)
+		{
+			next;
+		}
 		#$inlinehmm = checkMarker($arr[4]);
 		$inlinehmm = checkMarker($arr[3]);
 		#print "$arr[0], $inlinehmm, $arr[5], $arr[15], $arr[16]\n";
-		#if ($arr[0] =~ /([A-Za-z0-9._:;'"`=~\:\!\@\#\$\%\^\&\*\(\)\{\}\[\]\\\/\?\<\>\-\|]+)_[0-9]+$/)
-		if ($arr[0] =~ /([A-Za-z0-9._:;'"`=~\:\!\@\#\$\%\^\&\*\(\)\{\}\[\]\\\/\?\<\>\-\|]+)_[0-9]+_[0-9]+_[+\-]$/)
+		my $contig_id = find_original_contig($arr[0], \%lenhash);
+		if (defined($contig_id))
 		{
-			if (exists $lenhash{$1} && $lenhash{$1} >= $min_seq_len)
+			$matched_identifier_count++;
+			if ($lenhash{$contig_id} >= $min_seq_len)
 			{
 				if ($current ne $inlinehmm)
 				{
@@ -79,7 +107,7 @@ sub gethmmmarker
 							# Flush tmphash content to queryhash
 							$queryhash{$current} = $querycount;
 							$queryseqnum[$querycount] = 0;
-							foreach $tmp1 (keys %tmphash)
+							foreach $tmp1 (sort keys %tmphash)
 							{
 								$queryseq[$querycount][$queryseqnum[$querycount]] = $tmp1;
 								$queryseqnum[$querycount]++;
@@ -94,9 +122,9 @@ sub gethmmmarker
 				$i = $arr[16] - $arr[15];
 				if ($i / $arr[5] >= $COV_CUTOFF)
 				{
-					if (!(exists $tmphash{$1}))
+					if (!(exists $tmphash{$contig_id}))
 					{
-						$tmphash{$1} = 1;
+						$tmphash{$contig_id} = 1;
 					}
 				}
 			}
@@ -107,7 +135,7 @@ sub gethmmmarker
 		# Flush tmphash content to queryhash
 		$queryhash{$current} = $querycount;
 		$queryseqnum[$querycount] = 0;
-		foreach $tmp1 (keys %tmphash)
+		foreach $tmp1 (sort keys %tmphash)
 		{
 			$queryseq[$querycount][$queryseqnum[$querycount]] = $tmp1;
 			$queryseqnum[$querycount]++;
@@ -118,7 +146,7 @@ sub gethmmmarker
 
 	if ((scalar keys %queryhash) == 0)
 	{
-		return(-1);
+		return $matched_identifier_count == 0 ? 2 : 3;
 	}
 
 =print marker gene information
@@ -169,13 +197,13 @@ sub gethmmmarker
 	{
 		if ($max_effort == 0)
 		{
-			return -1;
+			return 3;
 		}
 		else
 		{
 			my $longest = "";
 			my $second = "";
-			foreach $tmp1 (sort {$lenhash{$b} <=> $lenhash{$a}} keys %lenhash)
+			foreach $tmp1 (sort {$lenhash{$b} <=> $lenhash{$a} || $a cmp $b} keys %lenhash)
 			{
 				if ($longest eq "")
 				{
@@ -190,7 +218,7 @@ sub gethmmmarker
 					last;
 				}
 			}
-			open(LOCALOUT, ">$out");
+			open(LOCALOUT, ">", $out) || die "Cannot write marker seed file $out\n";
 			if ($i == 0)
 			{
 				# Use the longest two contigs
@@ -199,7 +227,7 @@ sub gethmmmarker
 			elsif ($i == 1)
 			{
 				$j = 999999;
-				foreach $tmp1 (keys %queryhash)
+				foreach $tmp1 (sort keys %queryhash)
 				{
 					if ($queryseqnum[$queryhash{$tmp1}] == $i && $j > $querylen[$queryhash{$tmp1}])
 					{
@@ -223,7 +251,7 @@ sub gethmmmarker
 	else
 	{
 		$j = 999999;
-		foreach $tmp1 (keys %queryhash)
+		foreach $tmp1 (sort keys %queryhash)
 		{
 			if ($queryseqnum[$queryhash{$tmp1}] == $i && $j > $querylen[$queryhash{$tmp1}])
 			{
@@ -233,7 +261,7 @@ sub gethmmmarker
 		}
 		#print "$current\n";
 
-		open(LOCALOUT, ">$out");
+		open(LOCALOUT, ">", $out) || die "Cannot write marker seed file $out\n";
 		for ($i = 0; $i < $queryseqnum[$queryhash{$current}]; $i++)
 		{
 			print LOCALOUT "$queryseq[$queryhash{$current}][$i]\n";
@@ -241,6 +269,25 @@ sub gethmmmarker
 		close(LOCALOUT);
 	}
 	return 0;
+}
+
+sub find_original_contig
+{
+	my $candidate = $_[0];
+	my $lengths = $_[1];
+
+	if (exists $lengths->{$candidate})
+	{
+		return $candidate;
+	}
+	while ($candidate =~ s/_[^_]+$//)
+	{
+		if (exists $lengths->{$candidate})
+		{
+			return $candidate;
+		}
+	}
+	return undef;
 }
 
 # Returns array pointer of completeness back to the main program

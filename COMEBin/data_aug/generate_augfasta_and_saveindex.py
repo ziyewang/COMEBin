@@ -1,121 +1,192 @@
-from Bio import SeqIO
-import mimetypes
+from array import array
 import os
-import gzip
+from pathlib import Path
 import random
 import shutil
-from typing import Dict
+import tempfile
+
+from Bio import SeqIO
+import numpy as np
+
+from feature_bundle import FEATURE_SCHEMA_VERSION, publish_json_atomic
+from sequence_stats import calculate_n50
+from .gen_kmer import build_feature_lookup, count_kmers
 
 
-def get_inputsequences(fastx_file: str):
-    """
-    Retrieve sequences from a FASTX file and return them as a dictionary.
-
-    :param fastx_file: Path to the FASTX file (either FASTA or FASTQ).
-    :return: A dictionary where sequence IDs are keys and sequences are values.
-    """
-    file_type = mimetypes.guess_type(fastx_file)[1]
-    if file_type == 'gzip':
-        f = gzip.open(fastx_file, "rt")
-    elif not file_type:
-        f = open(fastx_file, "rt")
-    else:
-        raise RuntimeError("Unknown type of file: '{}".format(fastx_file))
-    seqs = {}
-    if os.path.getsize(fastx_file) == 0:
-        return seqs
-    file_format = None
-    line = f.readline()
-    if line.startswith('@'):
-        file_format = "fastq"
-    elif line.startswith(">"):
-        file_format = "fasta"
-    f.seek(0)
-    if not file_format:
-        raise RuntimeError("Invalid sequence file: '{}".format(fastx_file))
-    for seq_record in SeqIO.parse(f, file_format):
-        seqs[seq_record.id] = seq_record.seq
-
-    f.close()
-    return seqs
+def _open_uncompressed_fasta(path):
+    path = Path(path)
+    if not path.is_file() or path.stat().st_size == 0:
+        raise FileNotFoundError(f'Input FASTA is missing or empty: {path}')
+    input_handle = path.open('rt', encoding='utf-8')
+    first_character = input_handle.read(1)
+    input_handle.seek(0)
+    if first_character != '>':
+        input_handle.close()
+        raise ValueError(
+            f'Canonical COMEBin input must be an uncompressed FASTA file: {path}')
+    return input_handle
 
 
-def gen_augfasta(seqs: Dict[str, str], augprefix: str, out_file: str,
-                 p: float = None, contig_len: int = 1000):
-    """
-    Generate augmented sequences and save them to a FASTA file along with sequence information.
+def _publish_raw_array(raw_path, final_path, dtype, shape, chunk_rows=8192):
+    raw_path = Path(raw_path)
+    final_path = Path(final_path)
+    expected_bytes = int(np.prod(shape, dtype=np.int64)) * np.dtype(dtype).itemsize
+    actual_bytes = raw_path.stat().st_size
+    if actual_bytes != expected_bytes:
+        raise ValueError(
+            f'Raw array size mismatch for {raw_path}: bytes={actual_bytes}, '
+            f'expected={expected_bytes}, shape={shape}, dtype={np.dtype(dtype)}.')
 
-    :param seqs: A dictionary of input sequences where keys are sequence IDs, and values are sequences.
-    :param augprefix: A prefix used in the augmented sequence IDs.
-    :param out_file: Path to the output FASTA file.
-    :param p: Proportion of the original sequence to include in the augmented sequences (default is None).
-    :param contig_len: Minimum length of the original sequence required for augmentation (default is 1000).
-    """
-    seqkeys = []
-    for seqid in seqs.keys():
-        if len(seqs[seqid]) >= contig_len + 1:
-            seqkeys.append(seqid)
+    temporary_path = final_path.with_name(
+        f'.{final_path.name}.{os.getpid()}.tmp.npy')
+    try:
+        source = np.memmap(raw_path, mode='r', dtype=dtype, shape=shape)
+        target = np.lib.format.open_memmap(
+            temporary_path, mode='w+', dtype=dtype, shape=shape)
+        try:
+            for start in range(0, shape[0], chunk_rows):
+                end = min(start + chunk_rows, shape[0])
+                target[start:end] = source[start:end]
+            target.flush()
+        finally:
+            del target
+            del source
+        os.replace(temporary_path, final_path)
+    finally:
+        temporary_path.unlink(missing_ok=True)
 
-    aug_seq_info = []
-    if not p:
-        with open(out_file, 'w') as f:
-            for seqid in seqkeys:
-                start = random.randint(0, len(seqs[seqid]) - (contig_len+1))
-                sim_len = random.randint(contig_len, len(seqs[seqid]) - start)
-                end = start + sim_len - 1
-                # gen_seqs_dict[genome_name+"_sim_"+str(sim_count)] =seqs[seqid][start:end+1]
-                sequence = str(seqs[seqid][start:end + 1])
-                seqid_name = ">" + seqid + "_" + str(augprefix)
-                f.write(seqid_name + "\n")
-                f.write(sequence + "\n")
-                aug_seq_info.append((seqid, start, end, sim_len))
-    else:
-        with open(out_file, 'w') as f:
-            for seqid in seqkeys:
-                sim_len = int(p * len(seqs[seqid]))
-                start = random.randint(0, len(seqs[seqid]) - sim_len - 10)
-                end = start + sim_len - 1
-                # gen_seqs_dict[genome_name+"_sim_"+str(sim_count)] =seqs[seqid][start:end+1]
-                sequence = str(seqs[seqid][start:end + 1])
-                seqid_name = ">" + seqid + "_aug_" + str(augprefix)
-                f.write(seqid_name + "\n")
-                f.write(sequence + "\n")
-                aug_seq_info.append((seqid, start, end, sim_len))
 
-    aug_seq_info_out_file = out_file + '.aug_seq_info.tsv'
-
-    with open(aug_seq_info_out_file, 'w') as afile:
-        afile.write('seqid\tstart\tend\tlength\n')
-        for i in range(len(aug_seq_info)):
-            afile.write(
-                aug_seq_info[i][0] + '\t' + str(aug_seq_info[i][1]) + '\t' + str(aug_seq_info[i][2]) + '\t' + str(
-                    aug_seq_info[i][3]) + '\n')
+def _publish_feature_manifest(output_path, contig_count, n_views, contig_len,
+                              assembly_sequence_count, assembly_n50):
+    manifest = {
+        'schema_version': FEATURE_SCHEMA_VERSION,
+        'complete': True,
+        'contig_count': contig_count,
+        'assembly_sequence_count': assembly_sequence_count,
+        'assembly_n50': assembly_n50,
+        'n_views': n_views,
+        'contig_length_threshold': contig_len,
+        'interval_convention': 'zero-based-half-open',
+        'identifiers': {'file': 'contig_ids.txt', 'rows': contig_count},
+        'contig_lengths': {
+            'file': 'contig_lengths.npy', 'dtype': 'int64',
+            'shape': [contig_count]
+        },
+        'augmentation_intervals': {
+            'file': 'augmentation_intervals.npy', 'dtype': 'int64',
+            'shape': [contig_count, n_views, 2]
+        },
+        'kmer_counts': {
+            'file': 'kmer_counts.npy', 'dtype': 'uint32',
+            'shape': [contig_count, n_views, 136]
+        }
+    }
+    publish_json_atomic(output_path / 'feature_manifest.json', manifest)
 
 
 def run_gen_augfasta(logger, args):
-    """
-    Generate augmentation fasta file and save index
-    """
-    num_aug = args.n_views - 1  # Generate several copies of augmented data
-    fasta_file = args.contig_file
-    out_path = args.out_augdata_path
+    contig_file = Path(args.contig_file).expanduser().resolve()
+    output_path = Path(args.out_augdata_path).expanduser().resolve()
+    n_views = args.n_views
     contig_len = args.contig_len
+    if n_views < 1:
+        raise ValueError('n_views must be greater than zero.')
+    if contig_len < 1:
+        raise ValueError('contig_len must be greater than zero.')
 
-    outdir = out_path + '/aug0'
-    os.makedirs(outdir)
-    out_file = outdir + '/sequences_aug0.fasta'
-    shutil.copyfile(fasta_file, out_file)
+    output_path.mkdir(parents=True, exist_ok=True)
+    manifest_path = output_path / 'feature_manifest.json'
+    manifest_path.unlink(missing_ok=True)
+    (output_path / 'coverage_manifest.json').unlink(missing_ok=True)
+    work_path = Path(tempfile.mkdtemp(prefix='.augmentation-', dir=output_path))
+    ids_path = work_path / 'contig_ids.txt'
+    lengths_raw_path = work_path / 'contig_lengths.raw'
+    intervals_raw_path = work_path / 'augmentation_intervals.raw'
+    kmer_raw_path = work_path / 'kmer_counts.raw'
+    kmer_lookup, kmer_features = build_feature_lookup(4)
+    assembly_lengths = array('q')
+    if assembly_lengths.itemsize != np.dtype('<i8').itemsize:
+        raise RuntimeError('The platform signed-long-long width is not 64 bits.')
 
-    from .gen_kmer import run_gen_kmer
-    run_gen_kmer(out_file, 0, 4)
+    view_rngs = []
+    for view in range(1, n_views):
+        if args.seed is None:
+            view_rngs.append(random.Random())
+            logger.info('Generate augmentation view %d/%d without a fixed seed.',
+                        view, n_views - 1)
+        else:
+            view_seed = args.seed + view
+            view_rngs.append(random.Random(view_seed))
+            logger.info('Generate augmentation view %d/%d with seed %d.',
+                        view, n_views - 1, view_seed)
 
-    for i in range(num_aug):
-        outdir = out_path + '/aug' + str(i + 1)
-        os.makedirs(outdir)
-        logger.info("aug:\t" + str(i+1))
-        p = None
-        seqs = get_inputsequences(fasta_file)
+    contig_count = 0
+    seen_ids = set()
+    try:
+        with _open_uncompressed_fasta(contig_file) as input_handle:
+            with ids_path.open('w', encoding='utf-8') as ids_handle, \
+                    lengths_raw_path.open('wb') as lengths_handle, \
+                    intervals_raw_path.open('wb') as intervals_handle, \
+                    kmer_raw_path.open('wb') as kmer_handle:
+                for record in SeqIO.parse(input_handle, 'fasta'):
+                    contig_id = record.id
+                    if not contig_id:
+                        raise ValueError(f'FASTA contains an empty contig identifier: {contig_file}')
+                    if contig_id in seen_ids:
+                        raise ValueError(f'Duplicate contig identifier: {contig_id}')
+                    seen_ids.add(contig_id)
 
-        out_file = outdir + '/sequences_aug' + str(i + 1) + '.fasta'
-        gen_augfasta(seqs, 'aug' + str(i + 1), out_file, p=p, contig_len=contig_len)
-        run_gen_kmer(out_file, 0, 4)
+                    sequence = str(record.seq).upper()
+                    sequence_length = len(sequence)
+                    assembly_lengths.append(sequence_length)
+                    if sequence_length <= contig_len:
+                        continue
+
+                    intervals = np.empty((n_views, 2), dtype='<i8')
+                    kmer_counts = np.empty((n_views, kmer_features), dtype='<u4')
+                    intervals[0] = (0, sequence_length)
+                    kmer_counts[0] = count_kmers(
+                        sequence, kmer_lookup, kmer_features, 4)
+                    for view, rng in enumerate(view_rngs, start=1):
+                        start = rng.randint(
+                            0, sequence_length - (contig_len + 1))
+                        simulated_length = rng.randint(
+                            contig_len, sequence_length - start)
+                        end = start + simulated_length
+                        intervals[view] = (start, end)
+                        kmer_counts[view] = count_kmers(
+                            sequence[start:end], kmer_lookup, kmer_features, 4)
+
+                    ids_handle.write(contig_id + '\n')
+                    np.asarray(sequence_length, dtype='<i8').tofile(lengths_handle)
+                    intervals.tofile(intervals_handle)
+                    kmer_counts.tofile(kmer_handle)
+                    contig_count += 1
+
+        if not assembly_lengths:
+            raise ValueError(f'No sequences were found in {contig_file}.')
+        assembly_n50 = calculate_n50(np.asarray(assembly_lengths, dtype=np.int64))
+        if contig_count == 0:
+            raise ValueError(
+                f'No contigs longer than {contig_len} were found in {contig_file}.')
+
+        _publish_raw_array(
+            lengths_raw_path, output_path / 'contig_lengths.npy',
+            '<i8', (contig_count,))
+        _publish_raw_array(
+            intervals_raw_path, output_path / 'augmentation_intervals.npy',
+            '<i8', (contig_count, n_views, 2))
+        _publish_raw_array(
+            kmer_raw_path, output_path / 'kmer_counts.npy',
+            '<u4', (contig_count, n_views, kmer_features))
+        os.replace(ids_path, output_path / 'contig_ids.txt')
+        _publish_feature_manifest(
+            output_path, contig_count, n_views, contig_len,
+            len(assembly_lengths), assembly_n50)
+        logger.info(
+            'Generated binary augmentation features: assembly_contigs=%d, '
+            'assembly_n50=%d, retained_contigs=%d, views=%d, kmer_features=%d.',
+            len(assembly_lengths), assembly_n50, contig_count, n_views,
+            kmer_features)
+    finally:
+        shutil.rmtree(work_path, ignore_errors=True)

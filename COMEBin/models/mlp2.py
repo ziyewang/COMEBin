@@ -3,17 +3,15 @@ import torch.nn as nn
 import numpy as np
 import torch.nn.functional as F
 
-class EmbeddingNet(nn.Module):
+class CombinedEmbeddingNet(nn.Module):
     # Useful code from fast.ai tabular model
     # https://github.com/fastai/fastai/blob/3b7c453cfa3845c6ffc496dd4043c07f3919270e/fastai/tabular/models.py#L6
-    def __init__(self, in_sz, out_sz, emb_szs, ps, use_bn=True, actn=nn.ReLU(), pretrained_model=None, cov_model=None, covmodel_notl2normalize=False):
-        super(EmbeddingNet, self).__init__()
-        self.pretrained_model = pretrained_model
+    def __init__(self, in_sz, out_sz, emb_szs, ps, use_bn=True, actn=nn.ReLU(), cov_model=None):
+        super(CombinedEmbeddingNet, self).__init__()
         self.cov_model = cov_model
         self.in_sz = in_sz
         self.out_sz = out_sz
         self.n_embs = len(emb_szs) - 1
-        self.covmodel_notl2normalize = covmodel_notl2normalize
         if ps == 0:
             ps = np.zeros(self.n_embs)
         # input layer
@@ -48,28 +46,8 @@ class EmbeddingNet(nn.Module):
             layers.append(actn)
         return layers
 
-    def forward(self, x, x2=None):
-        if self.pretrained_model is not None and self.cov_model is None:
-            kmeremb = self.pretrained_model(x)
-            x = torch.cat([F.normalize(self.pretrained_model(x)), x2], dim=-1)
-        if self.pretrained_model is not None and self.cov_model is not None:
-            kmeremb = self.pretrained_model(x)
-            if self.covmodel_notl2normalize:
-                x = torch.cat([F.normalize(self.pretrained_model(x)), self.cov_model(x2)], dim=-1)
-            else:
-                x = torch.cat([F.normalize(self.pretrained_model(x)), F.normalize(self.cov_model(x2))], dim=-1)
-
-        if self.pretrained_model is None and self.cov_model is not None:
-            if self.covmodel_notl2normalize:
-                x = torch.cat([x, self.cov_model(x2)], dim=-1)
-            else:
-                x = torch.cat([x, F.normalize(self.cov_model(x2))], dim=-1)
-
-        output = self.fc(x)
-
-        if self.cov_model is not None and self.pretrained_model is not None:
-            return output, self.cov_model(x2), kmeremb
-        elif self.cov_model is not None and self.pretrained_model is None:
-            return output, self.cov_model(x2)
-        else:
-            return output#F.normalize(output) #output #/ torch.linalg.vector_norm(output, dim=-1, keepdim=True)
+    def forward(self, kmer_features, coverage_features):
+        coverage_embedding = self.cov_model(coverage_features)
+        combined = torch.cat([kmer_features, F.normalize(coverage_embedding)], dim=-1)
+        output = self.fc(combined)
+        return output, coverage_embedding

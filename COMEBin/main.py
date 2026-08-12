@@ -1,11 +1,15 @@
 import argparse
+import copy
+import faulthandler
 import logging
 import os
-import pandas as pd
+from pathlib import Path
+import numpy as np
 
 from comebin_version import __version__ as ver
 from train_CLmodel import train_CLmodel
 from cluster import cluster
+from utils import DEFAULT_HMM_EVALUE, DEFAULT_RANDOM_SEED, configure_reproducibility
 
 
 def arguments():
@@ -39,17 +43,11 @@ def arguments():
                                                   help='Train the model based on the augmentation data')
 
     CLtraining_subparsers.add_argument('--data', metavar='DIR', default='/home/wzy/data/STEC_data/for_new_method/data_augmentation_clean/',
-                        help='path to dataset')
-    CLtraining_subparsers.add_argument('--kmer_model_path', metavar='DIR', default='empty',
-                        help='kmer_model_path')
+                        help='path to a completed binary augmentation and coverage bundle')
     CLtraining_subparsers.add_argument('--output_path', metavar='DIR', default='output',
                                        help='Output path.')
-    CLtraining_subparsers.add_argument('-j', '--workers', default=5, type=int, metavar='N',
-                        help='number of data loading workers (default: 5)')
     CLtraining_subparsers.add_argument('--epochs', default=200, type=int, metavar='N',
                         help='number of total epochs to run')
-    CLtraining_subparsers.add_argument('--covmodelepochs', default=50, type=int, metavar='N',
-                        help='number of total epochs to pretrain coverage model')
 
     CLtraining_subparsers.add_argument('-b', '--batch_size', default=1024, type=int,
                         metavar='N',
@@ -70,14 +68,6 @@ def arguments():
                         help='embedding size for hidden layer (default: 2048)')
     CLtraining_subparsers.add_argument('--n_layer', default=3, type=int,
                         help='n layers (default: 3)')
-    CLtraining_subparsers.add_argument('--add_model_for_coverage', action="store_true",
-                        help='add_model_for_coverage.')
-
-    CLtraining_subparsers.add_argument('--nokmer', action="store_true",
-                        help='only use coverage information.')
-
-    CLtraining_subparsers.add_argument('--pretrain_coveragemodel', action="store_true",
-                        help='train ')
 
     CLtraining_subparsers.add_argument('--emb_szs_forcov', default=2048, type=int,
                         help='embedding size for hidden layer (default: 2048)')
@@ -89,16 +79,6 @@ def arguments():
     CLtraining_subparsers.add_argument('--earlystop', action="store_true",
                                        help='earlystop.')
 
-    CLtraining_subparsers.add_argument('--pretrain_kmer_model_path', metavar='DIR', default='no',
-                        help='pretrain_kmer_model_path')
-
-    CLtraining_subparsers.add_argument('--not_load_kmermetric_state', action="store_true",
-                        help='not_load_kmermetric_state')
-
-    CLtraining_subparsers.add_argument('--finetunepretrainmodel', action="store_true",
-                        help='finetunepretrainmodel')
-    CLtraining_subparsers.add_argument('--finetunelr_ratio', default=0.1, type=float, help='finetune learning rate')
-
     CLtraining_subparsers.add_argument('--addvars', action="store_true",
                                        help='addvars')
     CLtraining_subparsers.add_argument('--vars_sqrt', action="store_true",
@@ -107,10 +87,9 @@ def arguments():
     CLtraining_subparsers.add_argument('--log-every-n-steps', default=20, type=int,
                         help='Log every n steps')
 
-    CLtraining_subparsers.add_argument('--temperature', default=0.1, type=float,
-                        help='softmax temperature (default: 0.1)')
-    CLtraining_subparsers.add_argument('--covmodel_temperature', default=0.1, type=float,
-                        help='softmax temperature (default: 0.1)')
+    CLtraining_subparsers.add_argument(
+        '--temperature', default=None, type=float,
+        help='InfoNCE temperature; when omitted, use 0.07 for assembly N50 > 10000 and 0.15 otherwise.')
 
     CLtraining_subparsers.add_argument('--n_views', default=6, type=int, metavar='N',
                         help='Number of views for contrastive learning training.')
@@ -120,17 +99,8 @@ def arguments():
                         help='notuse_scheduler')
     CLtraining_subparsers.add_argument('--fp16-precision', action='store_true',
                         help='Whether or not to use 16-bit precision GPU training.')
-    CLtraining_subparsers.add_argument('--addcovloss', action='store_true',
-                        help='addcovloss')
-    CLtraining_subparsers.add_argument('--lambdaloss2', default=1, type=float,
-                        help='lambdaloss2 (default: 1)')
-
-    CLtraining_subparsers.add_argument('--addkmerloss', action='store_true',
-                                       help='addkmerloss')
-    CLtraining_subparsers.add_argument('--lambdakmerloss2', default=1, type=float,
-                                       help='lambdakmerloss2 (default: 1)')
-    CLtraining_subparsers.add_argument('--kmermodel_temperature', default=0.1, type=float,
-                                       help='kmermodel_temperature softmax temperature (default: 0.1)')
+    CLtraining_subparsers.add_argument('--device', default='cuda',
+                                       help='NN training device: cuda, cuda:N, or cpu.')
 
     CLtraining_subparsers.add_argument('--cov_meannormalize', action='store_true',
                                        help='cov_meannormalize')
@@ -140,18 +110,10 @@ def arguments():
                                        help='cov_standardization')
     CLtraining_subparsers.add_argument('--notuseaug0', action='store_true',
                                        help='notuseaug0')
-    CLtraining_subparsers.add_argument('--lossbalance', action='store_true',
-                                       help='lossbalance ((whole_loss[epoch0]/covloss[epoch0])')
-
-    CLtraining_subparsers.add_argument('--kmer_l2_normalize', action='store_true',
-                                       help='kmer_l2_normalize (used for nokmerMetric)')
-
-    CLtraining_subparsers.add_argument('--kmerMetric_notl2normalize', action='store_true',
-                                       help='kmerMetric_notl2normalize (used for kmerMetric)')
-    CLtraining_subparsers.add_argument('--covmodel_notl2normalize', action='store_true',
-                                       help='covmodel_notl2normalize (used for covmodel)')
     CLtraining_subparsers.add_argument('--num_threads', default=10, type=int,
-                                              help='num_threads for training in CPU mode.')
+                                       help='PyTorch intra-op threads; does not control DataLoader or native BLAS/OpenMP pools.')
+    CLtraining_subparsers.add_argument('--seed', default=DEFAULT_RANDOM_SEED, type=int,
+                                       help='optional random seed for reproducible training.')
 
 
 
@@ -165,7 +127,7 @@ def arguments():
     NoContrast_subparsers.add_argument('--contig_file', type=str, help=("The contigs file."))
     NoContrast_subparsers.add_argument('--seed_file', type=str, help=("The marker seed file."))
     NoContrast_subparsers.add_argument('--data', metavar='DIR', default='/home/wzy/data/STEC_data/for_new_method/data_augmentation_clean/',
-                                       help='path to dataset')
+                                       help='path to a completed binary augmentation and coverage bundle')
     NoContrast_subparsers.add_argument('--output_path', type=str, default='temp_output', help=("The output path"))
 
     NoContrast_subparsers.add_argument('--cluster_num', default=0, type=int,
@@ -179,6 +141,14 @@ def arguments():
 
     NoContrast_subparsers.add_argument('--contig_len', default = 1001, type=int, metavar='N',
                                        help='mininum contig length for clustering')
+    NoContrast_subparsers.add_argument('--num_threads', default=10, type=int,
+                                       help='num_threads for binning.')
+    NoContrast_subparsers.add_argument('--leiden_workers', default=None, type=int,
+                                       help='concurrent Leiden worker processes; defaults to num_threads.')
+    NoContrast_subparsers.add_argument('--max_edges', default=100, type=int,
+                                       help='HNSW neighbors retained per contig for Leiden graph construction.')
+    NoContrast_subparsers.add_argument('--seed', default=DEFAULT_RANDOM_SEED, type=int,
+                                       help='optional random seed for reproducible clustering.')
 
 
 
@@ -198,7 +168,9 @@ def arguments():
     generate_aug_data_subparsers.add_argument('--contig_len', default = 1000, type=int, metavar='N',
                                        help='mininum contig length for augmentation')
     generate_aug_data_subparsers.add_argument('--num_threads', default=10, type=int,
-                                              help='num_threads for generating augmentation data.')
+                                              help='concurrent coverage workers, capped by the number of BAM files.')
+    generate_aug_data_subparsers.add_argument('--seed', default=DEFAULT_RANDOM_SEED, type=int,
+                                              help='optional random seed for reproducible data augmentation.')
 
     #############################################################################################
     ############################################ cluster #####################################
@@ -209,7 +181,8 @@ def arguments():
 
     clustering_subparsers.add_argument('--contig_file', type=str, help=("The contigs file."))
     clustering_subparsers.add_argument('--seed_file', type=str, help=("The marker seed file."))
-    clustering_subparsers.add_argument('--emb_file', type=str, help=("The embedding feature file."))
+    clustering_subparsers.add_argument('--emb_file', type=str,
+                                       help=("Canonical embeddings.npy."))
     clustering_subparsers.add_argument('--output_path', type=str, help=("The output path"))
 
     clustering_subparsers.add_argument('--cluster_num', default=0, type=int,
@@ -225,6 +198,14 @@ def arguments():
                                        help='mininum contig length for clustering')
     clustering_subparsers.add_argument('--num_threads', default=10, type=int,
                                               help='num_threads for binning.')
+    clustering_subparsers.add_argument('--leiden_workers', default=None, type=int,
+                                       help='concurrent Leiden worker processes; defaults to num_threads.')
+    clustering_subparsers.add_argument('--max_edges', default=100, type=int,
+                                       help='HNSW neighbors retained per contig for Leiden graph construction.')
+    clustering_subparsers.add_argument('--hmm_evalue', default=DEFAULT_HMM_EVALUE, type=float,
+                                       help='HMMER sequence E-value used when marker HMMs do not define TC cutoffs.')
+    clustering_subparsers.add_argument('--seed', default=DEFAULT_RANDOM_SEED, type=int,
+                                       help='optional random seed for reproducible clustering.')
 
 
     #############################################################################################
@@ -236,13 +217,20 @@ def arguments():
 
     get_result_subparsers.add_argument('--contig_file', type=str, help=("The contigs file."))
     get_result_subparsers.add_argument('--seed_file', type=str, help=("The marker seed file."))
-    get_result_subparsers.add_argument('--emb_file', type=str, help=("The embedding feature file."))
+    get_result_subparsers.add_argument('--emb_file', type=str,
+                                       help=("Canonical embeddings.npy used to resolve the shared result axis."))
     get_result_subparsers.add_argument('--output_path', type=str, help=("The output path"))
     get_result_subparsers.add_argument('--binning_res_path', type=str, help=("The path to get Leiden clustering results"))
     get_result_subparsers.add_argument('--contig_len', default = 1001, type=int, metavar='N',
                                        help='mininum contig length for clustering')
     get_result_subparsers.add_argument('--num_threads', default=10, type=int,
                                        help='num_threads for getting final result.')
+    get_result_subparsers.add_argument('--max_edges', default=100, type=int,
+                                       help='HNSW neighbor count used by the completed Leiden run.')
+    get_result_subparsers.add_argument('--hmm_evalue', default=DEFAULT_HMM_EVALUE, type=float,
+                                       help='HMMER sequence E-value used when marker HMMs do not define TC cutoffs.')
+    get_result_subparsers.add_argument('--seed', default=DEFAULT_RANDOM_SEED, type=int,
+                                       help='optional random seed for reproducible runs.')
 
     get_result_subparsers.add_argument('--bac_mg_table', type=str, help=("bac_mg_table (bacteria marker gene information)"))
     get_result_subparsers.add_argument('--ar_mg_table', type=str, help=("ar_mg_table (archea marker gene information)"))
@@ -277,16 +265,29 @@ def main():
     if args.subcmd == 'generate_aug_data':
         args.output_path = args.out_augdata_path
 
-    os.makedirs(args.output_path, exist_ok=True)
-    handler = logging.FileHandler(args.output_path+'/comebin.log')
+    output_path = Path(args.output_path).expanduser().resolve()
+    output_path.mkdir(parents=True, exist_ok=True)
+    args.output_path = str(output_path)
+    handler = logging.FileHandler(output_path / 'comebin.log')
     handler.setLevel(logging.INFO)
     handler.setFormatter(formatter)
     logger.addHandler(handler)
+    faulthandler.enable(file=handler.stream, all_threads=True)
+    if args.seed is not None:
+        logger.info("Configure reproducibility: start with seed=%d, pid=%d.", args.seed, os.getpid())
+        configure_reproducibility(args.seed)
+        logger.info("Configure reproducibility: finished; seed=%d, PYTHONHASHSEED=%s, CUBLAS_WORKSPACE_CONFIG=%s.",
+                    args.seed, os.environ.get('PYTHONHASHSEED', 'not set'),
+                    os.environ.get('CUBLAS_WORKSPACE_CONFIG', 'not set'))
 
     ## training
     if args.subcmd == 'train':
         logger.info('train')
-        train_CLmodel(logger,args)
+        try:
+            train_CLmodel(logger, args)
+        except Exception:
+            logger.exception("Training failed.")
+            raise
 
     ## clustering
     if args.subcmd == 'bin':
@@ -294,7 +295,8 @@ def main():
         from utils import gen_seed
 
         num_threads = args.num_threads
-        _ = gen_seed(logger, args.contig_file, num_threads, args.contig_len, marker_name="bacar_marker", quarter="2quarter")
+        _ = gen_seed(logger, args.contig_file, num_threads, args.contig_len, marker_name="bacar_marker",
+                     quarter="2quarter", hmm_evalue=args.hmm_evalue)
 
         cluster(logger, args)
 
@@ -302,42 +304,53 @@ def main():
     ## clustering NoContrast
     if args.subcmd == 'nocontrast':
         logger.info('NoContrast mode')
-        from utils import get_kmer_coverage_aug0
+        from cluster import cluster_features, prepare_cluster_axis
+        from get_augfeature import load_nocontrast_view0
 
-        X_t, covMat, compositMat, namelist = get_kmer_coverage_aug0(args.data)
+        coverage, kmer, contig_ids, contig_lengths = load_nocontrast_view0(
+            args.data, logger)
+        retained, contig_ids, contig_lengths, seed_indexes, seed_count, n50 = \
+            prepare_cluster_axis(
+                contig_ids, contig_lengths, args.seed_file,
+                args.contig_len, logger)
+        logger.info(
+            'Prepared shared nocontrast axis: retained_contigs=%d, '
+            'unique_seeds=%d, retained_seeds=%d.',
+            len(contig_ids), seed_count, len(seed_indexes))
+        if not retained.all():
+            coverage = coverage[retained]
+            kmer = kmer[retained]
 
-        X_t_df = pd.DataFrame(X_t, index=namelist)
-        os.makedirs(args.output_path+'/combine_novars', exist_ok=True)
-        outfile = args.output_path+'/combine_novars/combine_feature.tsv'
-        X_t_df.to_csv(outfile, sep='\t', header=True)
-
-        covMat_df = pd.DataFrame(covMat, index=namelist)
-        os.makedirs(args.output_path+'/covMat', exist_ok=True)
-        outfile = args.output_path+'/covMat/covMat_feature.tsv'
-        covMat_df.to_csv(outfile, sep='\t', header=True)
-
-        compositMat_df = pd.DataFrame(compositMat, index=namelist)
-        os.makedirs(args.output_path+'/compositMat', exist_ok=True)
-        outfile = args.output_path+'/compositMat/compositMat_feature.tsv'
-        compositMat_df.to_csv(outfile, sep='\t', header=True)
-
-        logger.info('NoContrast mode: generate features (aug0)')
-        ori_outpath = args.output_path
+        original_output = Path(args.output_path)
+        combined = np.empty(
+            (len(contig_ids), coverage.shape[1] + kmer.shape[1]),
+            dtype=np.float32)
+        combined[:, :coverage.shape[1]] = coverage
+        combined[:, coverage.shape[1]:] = kmer
 
         logger.info('NoContrast mode (combine) bin')
-        args.output_path = ori_outpath +'/combine_novars'
-        args.emb_file = args.output_path+'/combine_feature.tsv'
-        cluster(logger,args)
+        combined_args = copy.copy(args)
+        combined_args.output_path = str(original_output / 'combine_novars')
+        cluster_features(
+            logger, combined_args, combined, contig_ids, contig_lengths,
+            seed_indexes, seed_count, n50)
+        del combined
 
         logger.info('NoContrast mode (coverage) bin')
-        args.output_path = ori_outpath +'/covMat'
-        args.emb_file = args.output_path+'/covMat_feature.tsv'
-        cluster(logger,args)
+        coverage_args = copy.copy(args)
+        coverage_args.output_path = str(original_output / 'covMat')
+        cluster_features(
+            logger, coverage_args, coverage, contig_ids, contig_lengths,
+            seed_indexes, seed_count, n50)
+        del coverage
 
         logger.info('NoContrast mode (kmer) bin')
-        args.output_path = ori_outpath +'/compositMat'
-        args.emb_file = args.output_path+'/compositMat_feature.tsv'
-        cluster(logger,args)
+        kmer_args = copy.copy(args)
+        kmer_args.output_path = str(original_output / 'compositMat')
+        cluster_features(
+            logger, kmer_args, kmer, contig_ids, contig_lengths,
+            seed_indexes, seed_count, n50)
+        del kmer
 
 
 
@@ -346,12 +359,10 @@ def main():
         logger.info('generate_aug_data: fastafile')
 
         from data_aug.generate_augfasta_and_saveindex import run_gen_augfasta
-        from data_aug.gen_cov import run_gen_cov
-        from data_aug.gen_var import run_gen_cov_var
+        from data_aug.gen_cov import run_gen_coverage
 
         run_gen_augfasta(logger, args)
-        run_gen_cov(logger, args)
-        run_gen_cov_var(logger, args)
+        run_gen_coverage(logger, args)
 
     ###Generate the final results from the Leiden clustering results
     if args.subcmd == 'get_result':
@@ -360,11 +371,11 @@ def main():
         from get_final_result import run_get_final_result
 
         num_threads = args.num_threads
-        seed_num = gen_seed(logger, args.contig_file, num_threads, args.contig_len, marker_name="bacar_marker", quarter="2quarter")
+        seed_num = gen_seed(logger, args.contig_file, num_threads, args.contig_len, marker_name="bacar_marker",
+                            quarter="2quarter", hmm_evalue=args.hmm_evalue)
 
         run_get_final_result(logger, args, seed_num, num_threads, ignore_kmeans_res=True)
 
 
 if __name__ == '__main__':
     main()
-

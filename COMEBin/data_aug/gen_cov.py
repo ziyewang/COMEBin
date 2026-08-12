@@ -1,302 +1,297 @@
-# modified from https://github.com/BigDataBiology/SemiBin/blob/main/SemiBin/generate_coverage.py
-import multiprocessing
-import traceback
-from multiprocessing.pool import Pool
-
-import os
-import subprocess
-from atomicwrites import atomic_write
-import pandas as pd
-import numpy as np
+from dataclasses import dataclass
 from itertools import groupby
-
-### Return error message when using multiprocessing
-def error(msg, *args):
-    return multiprocessing.get_logger().error(msg, *args)
-
-
-class LogExceptions(object):
-    def __init__(self, callable):
-        self.__callable = callable
-
-    def __call__(self, *args, **kwargs):
-        try:
-            result = self.__callable(*args, **kwargs)
-        except Exception as e:
-            error(traceback.format_exc())
-            raise
-
-        return result
-
-
-class LoggingPool(Pool):
-    def apply_async(self, func, args=(), kwds={}, callback=None):
-        return Pool.apply_async(self, LogExceptions(func), args, kwds, callback)
-
-
-def _checkback(msg):
-    msg[1].info('Processed:{}'.format(msg[0]))
-
-
-def gen_bedtools_out(bam_file: str, bam_index: int, out: str, logger):
-    """
-    Call bedtools and generate coverage file.
-
-    :param bam_file: Path to the BAM file used (str).
-    :param bam_index: Index for identifying the BAM file (int).
-    :param out: Output directory (str).
-
-    :return: A tuple containing the path to the processed BAM file and the logger.
-    """
-    logger.info('Processing `{}`'.format(bam_file))
-    bam_name = os.path.split(bam_file)[-1] + '_{}'.format(bam_index)
-    bam_depth = os.path.join(out, '{}_depth.txt'.format(bam_name))
-
-    with open(bam_depth, 'wb') as bedtools_out:
-        subprocess.check_call(
-            ['bedtools', 'genomecov',
-             '-bga',
-             '-ibam', bam_file],
-            stdout=bedtools_out)
-
-    return (bam_file, logger)
-
-
-
-def run_gen_bedtools_out(bam_file_path: str, out: str, logger, num_process: int = 10):
-    """
-    Run the `gen_bedtools_out` function for multiple BAM files in parallel using multiprocessing.
-
-    :param bam_file_path: Directory containing BAM files (str).
-    :param out: Output directory for storing coverage files (str).
-    :param num_process: Number of processes to run in parallel (int, default: 10).
-
-    :return: None
-    """
-    filenames = os.listdir(bam_file_path)
-    namelist = []
-    for filename in filenames:
-        if filename.endswith('.bam'):
-            namelist.append(filename)
-
-    namelist.sort()
-
-    os.makedirs(out, exist_ok=True)
-
-    pool = LoggingPool(num_process) if num_process != 0 else LoggingPool()
-
-    for i in range(len(namelist)):
-        bam_file = bam_file_path + namelist[i]
-        bam_index = i
-        pool.apply_async(
-            gen_bedtools_out,
-            args=(bam_file, bam_index, out, logger),
-            callback=_checkback)
-
-    pool.close()
-    pool.join()
-
-
-# modifed from https://github.com/BigDataBiology/SemiBin/blob/3bad22c58e710d8a5455f7411bc8d4202d557c61/SemiBin/generate_coverage.py#L5
-def calculate_coverage_samplebyindex(depth_file: str, augpredix: str, aug_seq_info_dict: dict, logger, edge: int = 0,
-                                     contig_threshold: int = 1000):
-    """
-    Calculate coverage from a position depth file for a set of contigs by index.
-
-    :param depth_file: Input position depth file generated from bedtools genomecov (str).
-    :param augpredix: Prefix used for generating output files (str).
-    :param aug_seq_info_dict: Dictionary containing information on contigs (dict).
-    :param edge: Number of bases to exclude from the edges of contigs (int, default: 0).
-    :param contig_threshold: Threshold for contig length, below which contigs are skipped (int, default: 1000).
-
-    :return: A tuple containing the input depth_file and logger (Tuple[str, logging.Logger).
-    """
-    contigs = []
-    mean_coverage = []
-
-    for contig_name, lines in groupby(open(depth_file), lambda ell: ell.split('\t', 1)[0]):
-        depth_value = []
-        for line in lines:
-            line_split = line.strip().split('\t')
-            length = int(float(line_split[2])) - int(float(line_split[1]))
-            value = int(float(line_split[3]))
-            depth_value.extend([value] * length)
-
-        cov_threshold = contig_threshold
-
-        if len(depth_value) <= cov_threshold:
-            continue
-        start = aug_seq_info_dict[contig_name][0]
-        end = aug_seq_info_dict[contig_name][1]
-
-        depth_value_ = depth_value[start + edge:end + 1 - edge]
-
-        mean = np.mean(depth_value_)
-        mean_coverage.append(mean)
-        contigs.append(contig_name)
-
-    contig_cov = pd.DataFrame(
-        {'{0}_cov'.format(depth_file): mean_coverage,
-         }, index=contigs)
-
-    with atomic_write(depth_file + '_' + augpredix + '_data_cov.csv', overwrite=True) as ofile:
-        contig_cov.to_csv(ofile, sep='\t')
-
-    return (depth_file, logger)
-
-
-def calculate_coverage(depth_file: str, logger, edge: int = 0,
-                       contig_threshold: int = 1000, sep: str = None,
-                       contig_threshold_dict: dict = None):
-    """
-    Calculate coverage based on a position depth file generated from mosdepth or bedtools genomecov.
-
-    :param depth_file: Path to the position depth file (str).
-    :param edge: Unused parameter, kept for compatibility (int, default: 0).
-    :param contig_threshold: Threshold of contigs for must-link constraints (int, default: 1000).
-    :param sep: Separator for multi-sample binning (str, default: None).
-    :param contig_threshold_dict: Dictionary of contig thresholds by sample (dict, default: None).
-
-    :return: None
-    """
-    contigs = []
-    mean_coverage = []
-
-    for contig_name, lines in groupby(open(depth_file), lambda ell: ell.split('\t', 1)[0]):
-        depth_value = []
-        for line in lines:
-            line_split = line.strip().split('\t')
-            length = int(float(line_split[2])) - int(float(line_split[1]))
-            value = int(float(line_split[3]))
-            depth_value.extend([value] * length)
-
-        if sep is None:
-            cov_threshold = contig_threshold
-        else:
-            sample_name = contig_name.split(sep)[0]
-            cov_threshold = contig_threshold_dict[sample_name]
-        if len(depth_value) <= cov_threshold:
-            continue
-
-        depth_value_ = depth_value
-
-        # modified
-        mean = np.mean(depth_value_)
-        mean_coverage.append(mean)
-        contigs.append(contig_name)
-
-    contig_cov = pd.DataFrame(
-        {'{0}_cov'.format(depth_file): mean_coverage,
-         }, index=contigs)
-
-    with atomic_write(depth_file + '_aug0_data_cov.csv', overwrite=True) as ofile:
-        contig_cov.to_csv(ofile, sep='\t')
-
-    return (depth_file, logger)
-
-
-def gen_cov_from_bedout(logger, out_path: str, depth_file_path: str,
-                        num_process: int = 10, num_aug: int = 5, edge: int = 0, contig_len: int = 1000):
-    """
-    Generate coverage data from bedtools output for original and augmented sequences.
-
-    :param out_path: Output directory for storing coverage files (str).
-    :param depth_file_path: Directory containing depth files (str).
-    :param num_process: Number of processes to run in parallel (int, default: 10).
-    :param num_aug: Number of augmented datasets (int, default: 5).
-    :param edge: Number of bases at contig edges to exclude (int, default: 0).
-    :param contig_len: Minimum contig length for inclusion (int, default: 1000).
-
-    :return: None
-    """
-    ########
-    filenames = os.listdir(depth_file_path)
-    namelist = []
-    for filename in filenames:
-        if filename.endswith('_depth.txt'):
-            namelist.append(filename)
-
-    namelist.sort()
-
-    pool = LoggingPool(num_process) if num_process != 0 else LoggingPool()
-    ##generate coverage for original data
-    for i in range(len(namelist)):
-        depth_file = depth_file_path + namelist[i]
-        pool.apply_async(
-            calculate_coverage,
-            args=(depth_file, logger, edge, contig_len),
-            callback=_checkback)
-
-    pool.close()
-    pool.join()
-
-    # merge coverage files
-    for nameid in range(len(namelist)):
-        cov_file = depth_file_path + namelist[
-            nameid] + '_aug0_data_cov.csv'
-        res_mat = pd.read_csv(cov_file, sep='\t', header=0, index_col=0)
-        if nameid == 0:
-            joined = res_mat
-        else:
-            joined = res_mat.join(joined, how="inner")
-
-    outfile = out_path + 'aug0_datacoverage_mean.tsv'
-    joined.to_csv(outfile, sep='\t', header=True)
-
-    for i in range(num_aug):
-        outdir = out_path + 'aug' + str(i + 1)
-        aug_seq_info_out_file = outdir + '/sequences_aug' + str(i + 1) + '.fasta' + '.aug_seq_info.tsv'
-        aug_seq_info_dict = read_aug_seq_info(aug_seq_info_out_file)
-
-        # num_process = 40
-        pool = LoggingPool(num_process) if num_process != 0 else LoggingPool()
-
-        ####generate coverage files
-        for nameid in range(len(namelist)):
-            depth_file = depth_file_path + namelist[nameid]
-            pool.apply_async(
-                calculate_coverage_samplebyindex,
-                args=(depth_file, 'aug' + str(i + 1), aug_seq_info_dict, logger, edge, contig_len),
-                callback=_checkback)
-
-        pool.close()
-        pool.join()
-
-        # merge coverage files
-        for nameid in range(len(namelist)):
-            cov_file = depth_file_path + namelist[
-                nameid] + '_aug' + str(i + 1) + '_data_cov.csv'
-
-            res_mat = pd.read_csv(cov_file, sep='\t', header=0, index_col=0)
-            if nameid == 0:
-                joined = res_mat
-            else:
-                joined = res_mat.join(joined, how="inner")
-
-        logger.info("Finish calculating coverage for aug_"+str(i+1))
-        outfile = out_path + 'aug' + str(i + 1) + '_datacoverage_mean.tsv'
-        joined.to_csv(outfile, sep='\t', header=True)
-
-
-def read_aug_seq_info(aug_seq_info_out_file):
-    aug_seq_info = pd.read_csv(aug_seq_info_out_file, sep='\t', header=0).values[:]
-    aug_seq_info_dict = {}
-    for i in range(len(aug_seq_info)):
-        aug_seq_info_dict[aug_seq_info[i][0]] = [aug_seq_info[i][1], aug_seq_info[i][2]]
-
-    return aug_seq_info_dict
-
-
-def run_gen_cov(logger, args):
-    logger.info("Generate coverage files from bam files.")
-
-    bam_file_path = args.bam_file_path
-    if not bam_file_path.endswith('/'):
-        bam_file_path = bam_file_path + '/'
-
-    if not args.out_augdata_path.endswith('/'):
-        args.out_augdata_path = args.out_augdata_path + '/'
-
-    out = args.out_augdata_path + 'depth/'
-    run_gen_bedtools_out(bam_file_path, out, logger,num_process=args.num_threads)
-    gen_cov_from_bedout(logger, args.out_augdata_path, out, num_aug=args.n_views-1, contig_len=args.contig_len,num_process=args.num_threads)
+import multiprocessing
+import os
+from pathlib import Path
+import subprocess
+import tempfile
+
+import numpy as np
+
+from feature_bundle import FEATURE_SCHEMA_VERSION, load_augmentation_bundle
+from feature_bundle import publish_ids_atomic, publish_json_atomic
+
+
+@dataclass(frozen=True)
+class CoverageContext:
+    contig_names: tuple
+    contig_index: dict
+    contig_lengths: np.ndarray
+    starts: np.ndarray
+    ends: np.ndarray
+
+
+_COVERAGE_CONTEXT = None
+
+
+def _build_coverage_context(out_path, n_views, contig_len):
+    bundle = load_augmentation_bundle(out_path, n_views=n_views)
+    if np.any(bundle.contig_lengths <= contig_len):
+        raise ValueError(
+            f'At least one retained contig is not longer than {contig_len}.')
+    contig_index = {
+        name: index for index, name in enumerate(bundle.contig_ids)
+    }
+    return CoverageContext(
+        bundle.contig_ids, contig_index, bundle.contig_lengths,
+        bundle.augmentation_intervals[:, :, 0],
+        bundle.augmentation_intervals[:, :, 1])
+
+
+def _update_stats(count, mean, m2, value, weight):
+    if weight <= 0:
+        return count, mean, m2
+    new_count = count + weight
+    delta = value - mean
+    mean += delta * weight / new_count
+    m2 += delta * delta * count * weight / new_count
+    return new_count, mean, m2
+
+
+def _parse_bedgraph_line(contig_name, line):
+    fields = line.rstrip('\r\n').split('\t')
+    if len(fields) != 4 or fields[0] != contig_name:
+        raise ValueError(
+            f'Malformed bedGraph row for {contig_name}: {line.rstrip()}')
+    try:
+        depth_start = int(fields[1])
+        depth_end = int(fields[2])
+        depth = float(fields[3])
+    except ValueError as error:
+        raise ValueError(
+            f'Malformed bedGraph values for {contig_name}: {line.rstrip()}') from error
+    if (depth_start < 0 or depth_end <= depth_start or
+            not np.isfinite(depth) or depth < 0):
+        raise ValueError(
+            f'Invalid bedGraph interval for {contig_name}: {line.rstrip()}')
+    return depth_start, depth_end, depth
+
+
+def _summarize_contig(contig_name, lines, starts, ends):
+    counts = np.zeros(len(starts), dtype=np.int64)
+    means = np.zeros(len(starts), dtype=np.float64)
+    m2 = np.zeros(len(starts), dtype=np.float64)
+    previous_end = 0
+    contig_length = int(ends[0])
+
+    for line in lines:
+        depth_start, depth_end, depth = _parse_bedgraph_line(contig_name, line)
+        if depth_start != previous_end or depth_end > contig_length:
+            raise ValueError(
+                f'Non-contiguous bedGraph coverage for {contig_name}: '
+                f'previous_end={previous_end}, row={line.rstrip()}')
+        previous_end = depth_end
+        for view in range(len(starts)):
+            overlap = max(
+                0, min(depth_end, int(ends[view])) -
+                max(depth_start, int(starts[view])))
+            counts[view], means[view], m2[view] = _update_stats(
+                counts[view], means[view], m2[view], depth, overlap)
+
+    if previous_end != contig_length:
+        raise ValueError(
+            f'Incomplete bedGraph span for {contig_name}: '
+            f'observed_end={previous_end}, expected_end={contig_length}.')
+    expected = ends - starts
+    if not np.array_equal(counts, expected):
+        raise ValueError(
+            f'Incomplete coverage for {contig_name}: '
+            f'observed={counts.tolist()}, expected={expected.tolist()}.')
+    return means, m2 / counts
+
+
+def _validate_ignored_group(contig_name, lines):
+    previous_end = 0
+    for line in lines:
+        depth_start, depth_end, _ = _parse_bedgraph_line(contig_name, line)
+        if depth_start != previous_end:
+            raise ValueError(
+                f'Non-contiguous bedGraph coverage for ignored contig '
+                f'{contig_name}: previous_end={previous_end}, row={line.rstrip()}')
+        previous_end = depth_end
+
+
+def _stream_bam_coverage(bam_path, context, sample_mean, sample_var, seen):
+    command = ['bedtools', 'genomecov', '-bga', '-ibam', str(bam_path)]
+    with tempfile.TemporaryFile(mode='w+t', encoding='utf-8') as stderr_handle:
+        with subprocess.Popen(
+                command, stdout=subprocess.PIPE, stderr=stderr_handle,
+                text=True, encoding='utf-8', bufsize=1024 * 1024) as process:
+            try:
+                for contig_name, lines in groupby(
+                        process.stdout, lambda line: line.split('\t', 1)[0]):
+                    index = context.contig_index.get(contig_name)
+                    if index is None:
+                        _validate_ignored_group(contig_name, lines)
+                        continue
+                    if seen[index]:
+                        raise ValueError(
+                            f'BAM coverage contains repeated groups for retained '
+                            f'contig {contig_name}: {bam_path}')
+                    means, variances = _summarize_contig(
+                        contig_name, lines, context.starts[index],
+                        context.ends[index])
+                    sample_mean[:, index] = means
+                    sample_var[:, index] = variances
+                    seen[index] = True
+            except BaseException:
+                process.terminate()
+                process.wait()
+                raise
+
+            returncode = process.wait()
+            if returncode != 0:
+                stderr_handle.seek(0)
+                stderr = stderr_handle.read()
+                raise RuntimeError(
+                    f'bedtools genomecov failed for {bam_path} with status '
+                    f'{returncode}: {stderr[-4000:]}')
+
+
+def _create_coverage_targets(out_path, n_samples, n_views, n_contigs):
+    mean_path = out_path / f'.coverage_mean.{os.getpid()}.tmp.npy'
+    var_path = out_path / f'.coverage_var.{os.getpid()}.tmp.npy'
+    mean_path.unlink(missing_ok=True)
+    var_path.unlink(missing_ok=True)
+    shape = (n_samples, n_views, n_contigs)
+    mean_array = np.lib.format.open_memmap(
+        mean_path, mode='w+', dtype='<f8', shape=shape)
+    var_array = np.lib.format.open_memmap(
+        var_path, mode='w+', dtype='<f8', shape=shape)
+    mean_array.flush()
+    var_array.flush()
+    del mean_array
+    del var_array
+    return mean_path, var_path
+
+
+def _process_bam(job):
+    bam_path, sample_index, mean_path, var_path = job
+    context = _COVERAGE_CONTEXT
+    if context is None:
+        raise RuntimeError('Coverage worker context was not initialized.')
+    expected_shape = (
+        sample_index + 1, len(context.starts[0]), len(context.contig_names))
+    mean_array = np.load(mean_path, mmap_mode='r+', allow_pickle=False)
+    var_array = np.load(var_path, mmap_mode='r+', allow_pickle=False)
+    if (mean_array.dtype != np.dtype('<f8') or
+            var_array.dtype != np.dtype('<f8') or
+            mean_array.shape != var_array.shape or
+            len(mean_array.shape) != 3 or
+            mean_array.shape[0] < expected_shape[0] or
+            mean_array.shape[1:] != expected_shape[1:]):
+        raise ValueError(
+            f'Invalid temporary coverage targets: mean_shape={mean_array.shape}, '
+            f'var_shape={var_array.shape}, sample_index={sample_index}.')
+
+    seen = np.zeros(len(context.contig_names), dtype=bool)
+    try:
+        sample_mean = mean_array[sample_index]
+        sample_var = var_array[sample_index]
+        _stream_bam_coverage(
+            bam_path, context, sample_mean, sample_var, seen)
+        if not np.all(seen):
+            missing = np.flatnonzero(~seen)
+            examples = [context.contig_names[index] for index in missing[:5]]
+            raise ValueError(
+                f'BAM coverage is missing {len(missing)} retained contigs for '
+                f'{bam_path}; examples={examples}.')
+        if (not np.isfinite(sample_mean).all() or
+                np.any(sample_mean < 0)):
+            raise ValueError(f'Coverage mean contains invalid values for {bam_path}.')
+        if (not np.isfinite(sample_var).all() or
+                np.any(sample_var < 0)):
+            raise ValueError(
+                f'Coverage variance contains invalid values for {bam_path}.')
+        mean_array.flush()
+        var_array.flush()
+    finally:
+        del mean_array
+        del var_array
+    return sample_index
+
+
+def _publish_coverage_manifest(out_path, n_contigs, n_views, n_samples):
+    shape = [n_samples, n_views, n_contigs]
+    manifest = {
+        'schema_version': FEATURE_SCHEMA_VERSION,
+        'complete': True,
+        'contig_count': n_contigs,
+        'n_views': n_views,
+        'sample_count': n_samples,
+        'identifiers': {'file': 'bam_ids.txt', 'rows': n_samples},
+        'coverage_mean': {
+            'file': 'coverage_mean.npy', 'dtype': 'float64',
+            'shape': shape
+        },
+        'coverage_var': {
+            'file': 'coverage_var.npy', 'dtype': 'float64',
+            'shape': shape
+        }
+    }
+    publish_json_atomic(out_path / 'coverage_manifest.json', manifest)
+
+
+def run_gen_coverage(logger, args):
+    if args.num_threads < 1:
+        raise ValueError('num_threads must be greater than zero.')
+    out_path = Path(args.out_augdata_path).expanduser().resolve()
+    bam_dir = Path(args.bam_file_path).expanduser().resolve()
+    if not bam_dir.is_dir():
+        raise FileNotFoundError(f'BAM directory does not exist: {bam_dir}')
+    bam_files = sorted(
+        path.resolve() for path in bam_dir.glob('*.bam') if path.is_file())
+    if not bam_files:
+        raise FileNotFoundError(f'No BAM files were found in {bam_dir}.')
+
+    coverage_manifest = out_path / 'coverage_manifest.json'
+    coverage_manifest.unlink(missing_ok=True)
+    context = _build_coverage_context(
+        out_path, args.n_views, args.contig_len)
+    workers = min(args.num_threads, len(bam_files))
+    if workers < args.num_threads:
+        logger.warning(
+            'Coverage requested %d workers but only %d BAM files exist; '
+            'using %d workers.', args.num_threads, len(bam_files), workers)
+    logger.info(
+        'Coverage inputs: contigs=%d, views=%d, BAMs=%d, workers=%d.',
+        len(context.contig_names), args.n_views, len(bam_files), workers)
+
+    mean_path, var_path = _create_coverage_targets(
+        out_path, len(bam_files), args.n_views,
+        len(context.contig_names))
+    global _COVERAGE_CONTEXT
+    _COVERAGE_CONTEXT = context
+    jobs = [
+        (bam_path, sample_index, mean_path, var_path)
+        for sample_index, bam_path in enumerate(bam_files)
+    ]
+    try:
+        with multiprocessing.get_context('fork').Pool(workers) as pool:
+            pending = [
+                pool.apply_async(_process_bam, (job,)) for job in jobs
+            ]
+            completed = [result.get() for result in pending]
+        if sorted(completed) != list(range(len(bam_files))):
+            raise RuntimeError(
+                f'Coverage workers returned an incomplete sample set: '
+                f'{sorted(completed)}.')
+
+        os.replace(mean_path, out_path / 'coverage_mean.npy')
+        os.replace(var_path, out_path / 'coverage_var.npy')
+        publish_ids_atomic(
+            out_path / 'bam_ids.txt',
+            [bam_path.name for bam_path in bam_files])
+        _publish_coverage_manifest(
+            out_path, len(context.contig_names), args.n_views,
+            len(bam_files))
+        logger.info(
+            'Published binary coverage features: BAMs=%d, views=%d, '
+            'contigs=%d, dtype=float64.',
+            len(bam_files), args.n_views, len(context.contig_names))
+    except BaseException:
+        mean_path.unlink(missing_ok=True)
+        var_path.unlink(missing_ok=True)
+        raise
+    finally:
+        _COVERAGE_CONTEXT = None
