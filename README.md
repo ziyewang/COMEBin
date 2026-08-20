@@ -29,11 +29,11 @@ COMEBin v1.1.0 is supported and tested in Linux systems.
 ## <a name="install"></a>Install COMEBin via bioconda
 COMEBin can be installed from Bioconda with the GPU-enabled PyTorch build from conda-forge:
 ```sh
-conda create -n comebin_env comebin pytorch-gpu cuda-version=12.6 \
+conda create -n comebin_env comebin pytorch-gpu cuda-version=13.0 \
   --channel conda-forge --channel bioconda --strict-channel-priority
 conda activate comebin_env
 ```
-To use CUDA 13.0 instead, replace `12.6` with `13.0`. For a CPU-only environment, use:
+For a CPU-only environment, use:
 
 ```sh
 conda create -n comebin_env comebin pytorch-cpu \
@@ -41,7 +41,7 @@ conda create -n comebin_env comebin pytorch-cpu \
 conda activate comebin_env
 ```
 
-The Bioconda package declares PyTorch as a runtime dependency. The `pytorch-gpu` and `pytorch-cpu` metapackages select the corresponding conda-forge build.
+The Bioconda package declares PyTorch as a runtime dependency. The `pytorch-gpu` and `pytorch-cpu` metapackages select the corresponding conda-forge build. The CUDA 13.0 example matches the PyTorch 2.13 dependency used by COMEBin 1.1.0.
 
 ## <a name="started"></a>Install COMEBin via source code
 You can also install COMEBin from the source code. 
