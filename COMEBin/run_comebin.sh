@@ -29,6 +29,7 @@ help_message () {
 	echo "  -e INT          embedding size for comebin network (default=2048)"
 	echo "  -c INT          embedding size for coverage network (default=2048)"
 	echo "  -b INT          batch size for training process (default=1024)"
+	echo "  -L INT          minimum contig length (default=1000)"
 	echo "";}
 
 report_stage_failure () {
@@ -54,13 +55,14 @@ temperature=
 emb_szs_forcov=2048
 emb_szs=2048
 batch_size=1024
+contig_len=1000
 device=cuda
 random_seed=
 leiden_workers=
 max_edges=100
 hmm_evalue=1e-5
 
-while getopts hVa:o:p:n:t:w:m:d:s:E:l:e:c:b: OPT; do
+while getopts hVa:o:p:n:t:w:m:d:s:E:l:e:c:b:L: OPT; do
  case ${OPT} in
   h) help_message
     exit 0
@@ -96,6 +98,8 @@ while getopts hVa:o:p:n:t:w:m:d:s:E:l:e:c:b: OPT; do
     ;;
   b) batch_size=${OPTARG}
     ;;
+  L) contig_len=${OPTARG}
+    ;;
   \?)
 #    printf "[Usage] `date '+%F %T'` -i <INPUT_FILE> -o <OUTPUT_DIR> -o <P
 #RODUCT_CODE> -s <SOFTWARE_VERSION> -t <TYPE>\n" >&2
@@ -117,6 +121,9 @@ fi
 echo "Leiden workers: ${leiden_workers:-same as -t (${num_threads})}"
 echo "HNSW neighbors per contig: ${max_edges}"
 echo "HMMER sequence E-value: ${hmm_evalue}"
+
+bin_contig_len=$((contig_len + 1))
+echo "Minimum contig length kept: ${bin_contig_len}"
 
 # check parameter
 if [ -z "${contig_file}" -o -z "${output_dir}" -o -z "${bam_file_path}" ]; then
@@ -165,7 +172,8 @@ else
     echo "Running data augmentation."
     python "${main_py}" generate_aug_data --contig_file "${contig_file}" \
     --out_augdata_path "${output_dir}/data_augmentation" \
-    --n_views "${n_views}" --bam_file_path "${bam_file_path}" --num_threads "${num_threads}" "${seed_options[@]}"
+    --n_views "${n_views}" --bam_file_path "${bam_file_path}" --num_threads "${num_threads}" \
+    --contig_len "${contig_len}" "${seed_options[@]}"
     augmentation_status=$?
 fi
 
@@ -206,7 +214,7 @@ fi
 ########################################################################################################
 #### Clustering (run Leiden-based clustering methods and get the final result)
 ########################################################################################################
-seed_file="${contig_file}.bacar_marker.2quarter_lencutoff_1001.seed"
+seed_file="${contig_file}.bacar_marker.2quarter_lencutoff_${bin_contig_len}.seed"
 leiden_options=(--max_edges "${max_edges}")
 if [ -n "${leiden_workers}" ]; then
     leiden_options+=(--leiden_workers "${leiden_workers}")
@@ -217,7 +225,8 @@ fi
 python "${main_py}" bin --contig_file "${contig_file}" \
 --emb_file "${emb_file}" \
 --output_path "${output_dir}/comebin_res" \
---seed_file "${seed_file}" --num_threads "${num_threads}" --hmm_evalue "${hmm_evalue}" "${leiden_options[@]}"
+--seed_file "${seed_file}" --num_threads "${num_threads}" --hmm_evalue "${hmm_evalue}" \
+--contig_len "${bin_contig_len}" "${leiden_options[@]}"
 bin_status=$?
 
 if [[ ${bin_status} -ne 0 ]]; then
@@ -228,7 +237,7 @@ python "${main_py}" get_result --contig_file "${contig_file}" \
 --output_path "${output_dir}/comebin_res" \
 --emb_file "${emb_file}" \
 --seed_file "${seed_file}" --num_threads "${num_threads}" --max_edges "${max_edges}" \
---hmm_evalue "${hmm_evalue}" "${seed_options[@]}"
+--hmm_evalue "${hmm_evalue}" --contig_len "${bin_contig_len}" "${seed_options[@]}"
 result_status=$?
 
 if [[ ${result_status} -ne 0 ]]; then
