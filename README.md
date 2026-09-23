@@ -125,6 +125,36 @@ cd COMEBin/scripts
 python Filter_tooshort.py final.contigs.fa 1000
 ```
 
+### Generate bam files with bowtie2 and `samtools sort` (alternative)
+Instead of running `gen_cov_file.sh`, you can build contig indexes and align reads directly with [bowtie2](https://bowtie-bio.sourceforge.net/bowtie2/index.shtml), then use `samtools sort` to produce coordinate-sorted bam files. Since COMEBin computes coverage with `bedtools genomecov`, the bam files must be coordinate-sorted; all `*.bam` files found in the `-p` directory are used as separate samples.
+
+```sh
+# 1. Build the bowtie2 index (once per assembly)
+bowtie2-build contig_file contig_index
+
+# 2. Align every sample's reads and convert each alignment to a sorted bam file.
+#    Create the output directory first:
+mkdir -p output_dir_of_bamfiles
+
+#    Paired-end reads (loop over each sample's forward read file):
+for reads in reads_dir/*_1.fastq; do
+  sample=$(basename "${reads}" _1.fastq)
+  bowtie2 -p 40 -x contig_index \
+    -1 "${reads}" -2 "reads_dir/${sample}_2.fastq" \
+    | samtools sort -@ 8 -o "output_dir_of_bamfiles/${sample}.bam" -
+done
+
+#    For single-end reads, use -U instead:
+for reads in reads_dir/*.fastq; do
+  sample=$(basename "${reads}" .fastq)
+  bowtie2 -p 40 -x contig_index -U "${reads}" \
+    | samtools sort -@ 8 -o "output_dir_of_bamfiles/${sample}.bam" -
+done
+
+# 3. Pass the bam directory to COMEBin: all *.bam files inside it are used as samples
+run_comebin.sh -a contig_file -p output_dir_of_bamfiles -o output_path -d cuda -t 40
+```
+
 
 ## <a name="runcomebin"></a>How to run COMEBin
 ### Run COMEBin via bioconda
